@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -14,7 +15,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
+import { VerifyEmailQueryDto } from './dto/verify-email-query.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { User } from '../users/domain/user';
@@ -44,12 +45,19 @@ export class AuthController {
     return this.service.login(loginDto);
   }
 
-  @Post('verify')
+  @Get('verify')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Email verified successfully' })
-  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto): Promise<{ message: string }> {
-    await this.service.verifyEmail(verifyEmailDto.token);
-    return { message: 'Email verified successfully' };
+  async verifyEmail(@Query('token') token: string): Promise<{ message: string; redirectUrl: string }> {
+    if (!token) {
+      throw new Error('Verification token is required');
+    }
+    console.log('Verification Token:', token);
+    await this.service.verifyEmail(token);
+    return { 
+      message: 'Email verified successfully',
+      redirectUrl: '/' // This points to the login page as per your frontend routes
+    };
   }
 
   @Post('forgot-password')

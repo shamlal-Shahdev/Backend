@@ -14,7 +14,7 @@ private readonly configService: ConfigService,
 
 async sendVerificationEmail(to: string, token: string) {
 const frontendUrl = this.configService.getOrThrow('app.frontendUrl', { infer: true });
-const verificationLink = `${frontendUrl}/verify?token=${token}`;
+const verificationLink = `http://localhost:3000/api/auth/verify?token=${token}`;
 
 
 await this.mailer.sendMail({
