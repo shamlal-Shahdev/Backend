@@ -8,10 +8,12 @@ import { AnonymousStrategy } from './strategies/anonymous.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';
+import { KycModule } from '../kyc/kyc.module';
 
 @Module({
   imports: [
     UsersModule,
+    KycModule,
     PassportModule,
     EmailModule,
     JwtModule.register({}),

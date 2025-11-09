@@ -7,6 +7,8 @@ export class UserMapper {
     domainEntity.id = raw.id;
     domainEntity.name = raw.name;
     domainEntity.email = raw.email;
+    // Handle phone - can be null in database, but expose as null (not undefined) for proper serialization
+    domainEntity.phone = raw.phone !== null && raw.phone !== undefined ? raw.phone : null;
     domainEntity.password = raw.password;
     domainEntity.isVerified = raw.isVerified;
     domainEntity.verificationToken = raw.verificationToken;
@@ -23,6 +25,7 @@ export class UserMapper {
     }
     persistenceEntity.name = domainEntity.name;
     persistenceEntity.email = domainEntity.email;
+    persistenceEntity.phone = domainEntity.phone ?? null;
     persistenceEntity.password = domainEntity.password;
     persistenceEntity.isVerified = domainEntity.isVerified;
     persistenceEntity.verificationToken = domainEntity.verificationToken ?? null;

@@ -29,6 +29,9 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: String })
   lastName: string;
 
+  @Column({ type: String, nullable: true })
+  phone: string | null;
+
   @Column()
   password: string;
 

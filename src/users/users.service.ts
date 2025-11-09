@@ -22,6 +22,7 @@ export class UsersService {
     lastName: string;
     email: string;
     password: string;
+    phone?: string | null;
     isVerified: boolean;
     verificationToken: string | null;
     resetToken: string | null;
@@ -36,14 +37,20 @@ export class UsersService {
         });
     }
 
-    return this.usersRepository.create({
+    // Create User domain object with firstName and lastName
+    const userData: User & { firstName: string; lastName: string } = {
       name: createUserDto.name || createUserDto.firstName + ' ' + createUserDto.lastName,
       email: createUserDto.email,
       password: createUserDto.password,
+      phone: createUserDto.phone || null,
       isVerified: createUserDto.isVerified,
       verificationToken: createUserDto.verificationToken,
       resetToken: createUserDto.resetToken,
-    });
+      firstName: createUserDto.firstName,
+      lastName: createUserDto.lastName,
+    } as any;
+
+    return this.usersRepository.create(userData);
   }
 
   findManyWithPagination({

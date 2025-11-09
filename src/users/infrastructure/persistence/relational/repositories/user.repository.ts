@@ -17,11 +17,56 @@ export class UsersRelationalRepository implements UserRepository {
     private readonly usersRepository: Repository<UserEntity>,
   ) {}
 
-  async create(data: User): Promise<User> {
+  async create(data: User & { firstName?: string; lastName?: string }): Promise<User> {
     const persistenceModel = UserMapper.toPersistence(data);
+    
+    // If firstName and lastName are provided, set them directly on the entity
+    if (data.firstName) {
+      persistenceModel.firstName = data.firstName;
+    }
+    if (data.lastName) {
+      persistenceModel.lastName = data.lastName;
+    }
+    
+    // If firstName/lastName not provided but name is, try to extract them
+    if (!persistenceModel.firstName && !persistenceModel.lastName && persistenceModel.name) {
+      const nameParts = persistenceModel.name.trim().split(/\s+/);
+      if (nameParts.length >= 2) {
+        persistenceModel.firstName = nameParts[0];
+        persistenceModel.lastName = nameParts.slice(1).join(' ');
+      } else if (nameParts.length === 1) {
+        persistenceModel.firstName = nameParts[0];
+        persistenceModel.lastName = '';
+      }
+    }
+    
+    // Ensure firstName and lastName are set (required fields)
+    if (!persistenceModel.firstName) {
+      persistenceModel.firstName = persistenceModel.name || 'User';
+    }
+    if (!persistenceModel.lastName) {
+      persistenceModel.lastName = '';
+    }
+    
+    // Log phone before saving
+    console.log('📱 Creating user entity with phone:', {
+      phone: persistenceModel.phone,
+      email: persistenceModel.email,
+      firstName: persistenceModel.firstName,
+      lastName: persistenceModel.lastName,
+    });
+    
     const newEntity = await this.usersRepository.save(
       this.usersRepository.create(persistenceModel),
     );
+    
+    // Log phone after saving
+    console.log('✅ User entity created with phone:', {
+      id: newEntity.id,
+      phone: newEntity.phone,
+      email: newEntity.email,
+    });
+    
     return UserMapper.toDomain(newEntity);
   }
 
@@ -69,13 +114,32 @@ export class UsersRelationalRepository implements UserRepository {
   }
 
   async findByEmail(email: User['email']): Promise<NullableType<User>> {
-    if (!email) return null;
+    if (!email) {
+      return null;
+    }
 
-    const entity = await this.usersRepository.findOne({
-      where: { email },
-    });
+    // Normalize email to lowercase for consistent lookup
+    const normalizedEmail = email.toLowerCase().trim();
 
-    return entity ? UserMapper.toDomain(entity) : null;
+    // Query with exact email match (case-insensitive comparison)
+    // This ensures we don't get false positives from case differences
+    const entity = await this.usersRepository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = LOWER(:email)', { email: normalizedEmail })
+      .getOne();
+
+    // Additional safety check: if entity found, verify exact match
+    if (entity) {
+      // Verify the stored email matches (case-insensitive)
+      if (entity.email.toLowerCase().trim() !== normalizedEmail) {
+        // This should never happen, but log it if it does
+        console.warn(`Email mismatch: searched for "${normalizedEmail}", found "${entity.email}"`);
+        return null;
+      }
+      return UserMapper.toDomain(entity);
+    }
+
+    return null;
   }
 
   async findByVerificationToken(token: string): Promise<NullableType<User>> {

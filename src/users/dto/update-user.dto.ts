@@ -7,6 +7,11 @@ export class UpdateUserDto {
   @IsString()
   name?: string;
 
+  @ApiProperty({ example: '+92 300 1234567', type: String, required: false })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
   @ApiProperty({ example: 'residential', type: String, required: false })
   @IsOptional()
   @IsString()
