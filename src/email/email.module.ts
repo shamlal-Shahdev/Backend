@@ -10,4 +10,3 @@ import emailConfig from './config/email.config';
   exports: [EmailService],
 })
 export class EmailModule {}
-

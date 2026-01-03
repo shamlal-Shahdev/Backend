@@ -1,23 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { KycController } from './kyc.controller';
 import { KycService } from './kyc.service';
-import { KycEntity } from './infrastructure/persistence/relational/entities/kyc.entity';
-import { DocumentEntity } from './infrastructure/persistence/relational/entities/document.entity';
-import { AuditLogEntity } from './infrastructure/persistence/relational/entities/audit-log.entity';
-import { KycRepository } from './infrastructure/persistence/relational/repositories/kyc.repository';
-import { DocumentRepository } from './infrastructure/persistence/relational/repositories/document.repository';
-import { AuditLogRepository } from './infrastructure/persistence/relational/repositories/audit-log.repository';
-import { FilesModule } from '../files/files.module';
+import { KycController } from './kyc.controller';
+import { KycEntity } from './entity/kyc.entity';
+import { UserEntity } from '../user/entity/user.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([KycEntity, DocumentEntity, AuditLogEntity]),
-    FilesModule,
-  ],
+  imports: [TypeOrmModule.forFeature([KycEntity, UserEntity])],
   controllers: [KycController],
-  providers: [KycService, KycRepository, DocumentRepository, AuditLogRepository],
-  exports: [KycService, KycRepository, DocumentRepository, AuditLogRepository],
+  providers: [KycService],
+  exports: [KycService],
 })
 export class KycModule {}
-

@@ -6,7 +6,9 @@ import { SessionSchemaClass } from '../entities/session.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { SessionMapper } from '../mappers/session.mapper';
-import { User } from '../../../../../users/domain/user';
+// import { User } from '../../../../../users/domain/user'; // Old users module not found
+// Temporary User type
+type User = { id: string | number };
 
 @Injectable()
 export class SessionDocumentRepository implements SessionRepository {

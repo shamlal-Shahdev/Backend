@@ -17,9 +17,12 @@ export class FilesService {
     return this.fileRepository.findByIds(ids);
   }
 
-  async uploadFile(file: Express.Multer.File): Promise<{ id: string; key: string; url: string }> {
+  async uploadFile(
+    file: Express.Multer.File,
+  ): Promise<{ id: string; key: string; url: string }> {
     // Generate a unique key for the file
-    const fileExtension = file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileExtension =
+      file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
     const key = `kyc/${randomStringGenerator()}.${fileExtension}`;
 
     // Create file record in database
@@ -37,7 +40,8 @@ export class FilesService {
   }
 
   async create(file: Express.Multer.File): Promise<FileType> {
-    const fileExtension = file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileExtension =
+      file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
     const key = `uploads/${randomStringGenerator()}.${fileExtension}`;
 
     return this.fileRepository.create({

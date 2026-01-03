@@ -1,4 +1,4 @@
-import { User } from '../../../users/domain/user';
+import { UserEntity as User } from '../../../user/entity/user.entity';
 import { NullableType } from '../../../utils/types/nullable.type';
 import { Session } from '../../domain/session';
 

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 import bcrypt from 'bcryptjs';
-import { UserEntity } from '../../../../users/infrastructure/persistence/relational/entities/user.entity';
+import { UserEntity, UserRole } from '../../../../user/entity/user.entity';
 
 @Injectable()
 export class UserSeedService {
@@ -25,11 +25,11 @@ export class UserSeedService {
 
       await this.repository.save(
         this.repository.create({
-          firstName: 'Super',
-          lastName: 'Admin',
           name: 'Super Admin',
           email: 'admin@example.com',
-          password,
+          passwordHash: password,
+          walletAddress: `0x${Math.random().toString(16).substr(2, 40)}`,
+          role: UserRole.ADMIN,
           isVerified: true,
           verificationToken: null,
           resetToken: null,
@@ -49,11 +49,11 @@ export class UserSeedService {
 
       await this.repository.save(
         this.repository.create({
-          firstName: 'John',
-          lastName: 'Doe',
           name: 'John Doe',
           email: 'john.doe@example.com',
-          password,
+          passwordHash: password,
+          walletAddress: `0x${Math.random().toString(16).substr(2, 40)}`,
+          role: UserRole.USER,
           isVerified: true,
           verificationToken: null,
           resetToken: null,

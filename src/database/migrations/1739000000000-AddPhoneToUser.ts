@@ -12,9 +12,6 @@ export class AddPhoneToUser1739000000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove phone column from user table
-    await queryRunner.query(
-      `ALTER TABLE "user" DROP COLUMN IF EXISTS "phone"`,
-    );
+    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "phone"`);
   }
 }
-

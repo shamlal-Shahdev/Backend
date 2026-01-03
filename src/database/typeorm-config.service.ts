@@ -21,8 +21,10 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       }),
       dropSchema: false,
       keepConnectionAlive: true,
-      logging:
-        this.configService.get('app.nodeEnv', { infer: true }) !== 'production',
+      logging: false, // Set to false to disable database query logging
+      // Alternative options:
+      // logging: ['error'], // Only log errors
+      // logging: ['warn', 'error'], // Log warnings and errors
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
       cli: {

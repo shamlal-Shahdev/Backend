@@ -1,5 +1,4 @@
-import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
-import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
+import { UserEntity } from '../../../../../user/entity/user.entity';
 import { Session } from '../../../../domain/session';
 import { SessionEntity } from '../entities/session.entity';
 
@@ -8,7 +7,8 @@ export class SessionMapper {
     const domainEntity = new Session();
     domainEntity.id = raw.id;
     if (raw.user) {
-      domainEntity.user = UserMapper.toDomain(raw.user);
+      // Direct mapping since UserEntity is now the domain entity
+      domainEntity.user = raw.user as any;
     }
     domainEntity.hash = raw.hash;
     domainEntity.createdAt = raw.createdAt;
@@ -19,7 +19,11 @@ export class SessionMapper {
 
   static toPersistence(domainEntity: Session): SessionEntity {
     const user = new UserEntity();
-    user.id = domainEntity.user.id as string;
+    // UserEntity.id is now number, not string
+    user.id =
+      typeof domainEntity.user.id === 'string'
+        ? parseInt(domainEntity.user.id, 10)
+        : domainEntity.user.id;
 
     const persistenceEntity = new SessionEntity();
     if (domainEntity.id && typeof domainEntity.id === 'number') {

@@ -8,7 +8,7 @@ import { SessionRepository } from '../../session.repository';
 import { Session } from '../../../../domain/session';
 
 import { SessionMapper } from '../mappers/session.mapper';
-import { User } from '../../../../../users/domain/user';
+import { UserEntity as User } from '../../../../../user/entity/user.entity';
 
 @Injectable()
 export class SessionRelationalRepository implements SessionRepository {
@@ -67,9 +67,13 @@ export class SessionRelationalRepository implements SessionRepository {
   }
 
   async deleteByUserId(conditions: { userId: User['id'] }): Promise<void> {
+    const userIdNum =
+      typeof conditions.userId === 'string'
+        ? parseInt(conditions.userId, 10)
+        : conditions.userId;
     await this.sessionRepository.softDelete({
       user: {
-        id: conditions.userId as string,
+        id: userIdNum,
       },
     });
   }
@@ -78,9 +82,13 @@ export class SessionRelationalRepository implements SessionRepository {
     userId: User['id'];
     excludeSessionId: Session['id'];
   }): Promise<void> {
+    const userIdNum =
+      typeof conditions.userId === 'string'
+        ? parseInt(conditions.userId, 10)
+        : conditions.userId;
     await this.sessionRepository.softDelete({
       user: {
-        id: conditions.userId as string,
+        id: userIdNum,
       },
       id: Not(Number(conditions.excludeSessionId)),
     });

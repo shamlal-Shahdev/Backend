@@ -86,4 +86,3 @@ export class AddKycSystem1738500000000 implements MigrationInterface {
     await queryRunner.query('ALTER TABLE user DROP COLUMN role');
   }
 }
-

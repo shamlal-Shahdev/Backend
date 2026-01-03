@@ -1,16 +1,24 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
-import { UserEntity } from '../users/infrastructure/persistence/relational/entities/user.entity';
-import { KycModule } from '../kyc/kyc.module';
-import { EmailModule } from '../email/email.module';
+import { AdminAuthModule } from './auth/admin-auth.module';
+import { AdminKycModule } from './kyc/kyc.module';
+import { AdminUsersModule } from './users/users.module';
+import { AdminDashboardModule } from './dashboard/dashboard.module';
+import { AdminAuditModule } from './audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity]), KycModule, EmailModule],
-  controllers: [AdminController],
-  providers: [AdminService],
-  exports: [AdminService],
+  imports: [
+    AdminAuthModule,
+    AdminKycModule,
+    AdminUsersModule,
+    AdminDashboardModule,
+    AdminAuditModule,
+  ],
+  exports: [
+    AdminAuthModule,
+    AdminKycModule,
+    AdminUsersModule,
+    AdminDashboardModule,
+    AdminAuditModule,
+  ],
 })
 export class AdminModule {}
-

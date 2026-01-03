@@ -28,35 +28,65 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     );
 
     // Drop old columns
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "photoId"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "roleId"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "statusId"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "provider"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "socialId"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "firstName"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "lastName"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "deletedAt"`);
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "photoId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "roleId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "statusId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "provider"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "socialId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "firstName"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "lastName"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "deletedAt"`,
+    );
 
     // Change id from SERIAL to UUID
-    await queryRunner.query(`ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "PK_cace4a159ff9f2512dd42373760"`);
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "id" DROP DEFAULT`);
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "id" TYPE uuid USING gen_random_uuid()`);
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "id" SET DEFAULT uuid_generate_v4()`);
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "PK_cace4a159ff9f2512dd42373760"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "id" DROP DEFAULT`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "id" TYPE uuid USING gen_random_uuid()`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "id" SET DEFAULT uuid_generate_v4()`,
+    );
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id")`,
     );
 
     // Make email required and unique
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "email" SET NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "email" SET NOT NULL`,
+    );
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email")`,
     );
 
     // Make password required
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "password" SET NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "password" SET NOT NULL`,
+    );
 
     // Add new columns
-    await queryRunner.query(`ALTER TABLE "user" ADD COLUMN "name" character varying NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "user" ADD COLUMN "name" character varying NOT NULL`,
+    );
     await queryRunner.query(
       `ALTER TABLE "user" ADD COLUMN "installationType" character varying NOT NULL`,
     );
@@ -85,26 +115,46 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_verificationToken"`);
 
     // Drop new columns
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "resetToken"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "verificationToken"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "isVerified"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "installationType"`);
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "resetToken"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "verificationToken"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "isVerified"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "installationType"`,
+    );
     await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "name"`);
 
     // Revert password
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "password" DROP NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "password" DROP NOT NULL`,
+    );
 
     // Revert email
     await queryRunner.query(
       `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "UQ_e12875dfb3b1d92d7d7c5377e22"`,
     );
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "email" DROP NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "email" DROP NOT NULL`,
+    );
 
     // Revert id to SERIAL
-    await queryRunner.query(`ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "PK_cace4a159ff9f2512dd42373760"`);
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "id" DROP DEFAULT`);
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "id" TYPE integer USING id::text::integer`);
-    await queryRunner.query(`ALTER TABLE "user" ALTER COLUMN "id" SET DEFAULT nextval('user_id_seq'::regclass)`);
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "PK_cace4a159ff9f2512dd42373760"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "id" DROP DEFAULT`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "id" TYPE integer USING id::text::integer`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" ALTER COLUMN "id" SET DEFAULT nextval('user_id_seq'::regclass)`,
+    );
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id")`,
     );
@@ -158,4 +208,3 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     );
   }
 }
-

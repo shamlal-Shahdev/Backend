@@ -1,9 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { now, HydratedDocument } from 'mongoose';
-import { UserSchemaClass } from '../../../../../users/infrastructure/persistence/document/entities/user.schema';
+// import { UserSchemaClass } from '../../../../../users/infrastructure/persistence/document/entities/user.schema'; // Old users module not found
 import { EntityDocumentHelper } from '../../../../../utils/document-entity-helper';
 
 export type SessionSchemaDocument = HydratedDocument<SessionSchemaClass>;
+
+// Temporary UserSchemaClass until MongoDB user schema is restored
+class UserSchemaClass {
+  _id: mongoose.Types.ObjectId;
+}
 
 @Schema({
   timestamps: true,

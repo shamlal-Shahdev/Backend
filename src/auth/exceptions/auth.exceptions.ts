@@ -55,7 +55,9 @@ export class InvalidTokenException extends HttpException {
 }
 
 export class UserNotFoundException extends HttpException {
-  constructor(message: string = 'This email is not registered. Please register first to create an account.') {
+  constructor(
+    message: string = 'This email is not registered. Please register first to create an account.',
+  ) {
     super(
       {
         statusCode: HttpStatus.UNPROCESSABLE_ENTITY,

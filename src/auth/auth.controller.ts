@@ -5,27 +5,20 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Put,
   Query,
   Request,
   SerializeOptions,
   UseGuards,
-  UseInterceptors,
-  UploadedFiles,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
-import { ApiBearerAuth, ApiOkResponse, ApiTags, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyEmailQueryDto } from './dto/verify-email-query.dto';
-import { RegisterWithKycDto } from '../kyc/dto/register-with-kyc.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { LoginResponseDto } from './dto/login-response.dto';
-import { User } from '../users/domain/user';
-import { UpdateUserDto } from '../users/dto/update-user.dto';
+import { UserEntity as User } from '../user/entity/user.entity';
 
 @ApiTags('Auth')
 @Controller({
@@ -38,40 +31,18 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOkResponse({ description: 'User registered successfully' })
-  async register(@Body() registerDto: RegisterDto): Promise<{ message: string }> {
+  async register(
+    @Body() registerDto: RegisterDto,
+  ): Promise<{ message: string }> {
     console.log('Register DTO:', registerDto);
     await this.service.register(registerDto);
-    return { message: 'Registration successful. Please check your email for verification.' };
-  }
-
-  @Post('register-with-kyc')
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'cnicFront', maxCount: 1 },
-      { name: 'cnicBack', maxCount: 1 },
-      { name: 'selfie', maxCount: 1 },
-    ]),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiOkResponse({ description: 'User registered with KYC successfully' })
-  async registerWithKyc(
-    @Body() registerWithKycDto: RegisterWithKycDto,
-    @UploadedFiles()
-    files: {
-      cnicFront?: Express.Multer.File[];
-      cnicBack?: Express.Multer.File[];
-      selfie?: Express.Multer.File[];
-    },
-  ): Promise<{ message: string }> {
-    await this.service.registerWithKyc(registerWithKycDto, files);
     return {
       message:
-        'Registration successful. Please check your email for verification. Your KYC has been submitted and will be reviewed by an admin.',
+        'Registration successful. Please check your email for verification.',
     };
   }
 
-  @Post('login')  
+  @Post('login')
   @HttpCode(HttpStatus.OK)
   @SerializeOptions({ groups: ['me'] })
   @ApiOkResponse({
@@ -84,15 +55,17 @@ export class AuthController {
   @Get('verify')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Email verified successfully' })
-  async verifyEmail(@Query('token') token: string): Promise<{ message: string; redirectUrl: string }> {
+  async verifyEmail(
+    @Query('token') token: string,
+  ): Promise<{ message: string; redirectUrl: string }> {
     if (!token) {
       throw new Error('Verification token is required');
     }
     console.log('Verification Token:', token);
     await this.service.verifyEmail(token);
-    return { 
+    return {
       message: 'Email verified successfully',
-      redirectUrl: '/' // This points to the login page as per your frontend routes
+      redirectUrl: '/', // This points to the login page as per your frontend routes
     };
   }
 
@@ -112,34 +85,26 @@ export class AuthController {
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
-    await this.service.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    await this.service.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
     return { message: 'Password reset successfully' };
   }
 
-  @ApiBearerAuth()
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
-  @SerializeOptions({ groups: ['me'] })
-  @ApiOkResponse({
-    type: User,
-  })
-  @HttpCode(HttpStatus.OK)
-  public me(@Request() request): Promise<User> {
-    return this.service.me(request.user);
-  }
-
   @ApiBearerAuth()
-  @Put('me')
-  @UseGuards(AuthGuard('jwt'))
-  @SerializeOptions({ groups: ['me'] })
   @HttpCode(HttpStatus.OK)
+  @SerializeOptions({ groups: ['me'] })
   @ApiOkResponse({
+    description: 'Current user profile',
     type: User,
   })
-  public updateMe(
-    @Request() request,
-    @Body() updateUserDto: UpdateUserDto,
-  ): Promise<User> {
-    return this.service.updateMe(request.user.id, updateUserDto);
+  async getCurrentUser(@Request() req): Promise<User> {
+    // Since JWT strategy now returns UserEntity, request.user is already the user
+    // But we'll use the service method to ensure we get the latest data from database
+    const user = req.user as User;
+    return this.service.me({ id: user.id, email: user.email });
   }
 }
