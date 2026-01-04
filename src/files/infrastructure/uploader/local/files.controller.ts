@@ -1,12 +1,13 @@
 import {
   Controller,
   Get,
-  Param,
   Post,
-  Response,
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Header,
+  Res,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -20,6 +21,8 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { FilesLocalService } from './files.service';
 import { FileResponseDto } from './dto/file-response.dto';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 @ApiTags('Files')
 @Controller({
@@ -54,9 +57,56 @@ export class FilesLocalController {
     return this.filesService.create(file);
   }
 
-  @Get(':path')
+  @Get('*')
   @ApiExcludeEndpoint()
-  download(@Param('path') path, @Response() response) {
-    return response.sendFile(path, { root: './files' });
+  @Header('Access-Control-Allow-Origin', '*')
+  @Header('Access-Control-Allow-Methods', 'GET')
+  @Header('Access-Control-Allow-Headers', 'Content-Type')
+  download(@Req() request: any, @Res() response) {
+    // Get the full path from the request URL
+    // Remove the base path: /api/v1/files/
+    const url = request.url;
+    const basePath = '/api/v1/files/';
+    let filePath = url.replace(basePath, '');
+
+    // If versioning is in the path, handle it
+    if (filePath.startsWith('v1/')) {
+      filePath = filePath.replace('v1/', '');
+    }
+
+    // Decode the path in case it's URL encoded
+    const decodedPath = decodeURIComponent(filePath);
+
+    // Construct the full file path
+    const fullFilePath = join(process.cwd(), 'files', decodedPath);
+
+    // Check if file exists
+    if (!existsSync(fullFilePath)) {
+      return response
+        .status(404)
+        .json({ message: 'File not found', path: decodedPath });
+    }
+
+    // Set appropriate content type for images
+    const ext = decodedPath.split('.').pop()?.toLowerCase();
+    const contentTypes: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      pdf: 'application/pdf',
+      webp: 'image/webp',
+    };
+
+    if (ext && contentTypes[ext]) {
+      response.setHeader('Content-Type', contentTypes[ext]);
+    }
+
+    // Set CORS headers explicitly
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Methods', 'GET');
+
+    // Send the file
+    return response.sendFile(fullFilePath);
   }
 }

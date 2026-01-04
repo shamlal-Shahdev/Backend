@@ -1,4 +1,9 @@
-import { HttpException, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  Logger,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register.dto';
@@ -151,6 +156,16 @@ export class AuthService {
           `🔒 Invalid password attempt for user: ${normalizedEmail}`,
         );
         throw new InvalidCredentialsException();
+      }
+
+      // Check if user is admin - admins must use admin login endpoint
+      if (user.role === UserRole.ADMIN) {
+        this.logger.warn(
+          `🚫 Admin login attempt through user endpoint: ${normalizedEmail}`,
+        );
+        throw new ForbiddenException(
+          'Admin users must use the admin login endpoint. Please use the admin login page.',
+        );
       }
 
       // Generate JWT token only if all checks pass

@@ -74,9 +74,18 @@ export class KycService {
     await this.kycRepository.remove(kyc);
   }
 
-  async getUserKycStatus(
-    userId: number,
-  ): Promise<{ status: KycStatus; userId: number }> {
+  async getUserKycStatus(userId: number): Promise<{
+    status: KycStatus;
+    userId: number;
+    rejectionReason?: string | null;
+    documents?: Array<{
+      id: number;
+      docType: string;
+      status: string;
+      submittedAt: Date;
+      adminNotes?: string | null;
+    }>;
+  }> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       select: ['id', 'kycStatus'],
@@ -86,9 +95,68 @@ export class KycService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    // Fetch KYC documents to get admin notes
+    const kycDocuments = await this.kycRepository.find({
+      where: { userId },
+      order: { submittedAt: 'DESC' },
+      select: [
+        'id',
+        'adminNotes',
+        'submittedAt',
+        'CnicFrontUrl',
+        'CnicBackUrl',
+        'SelfieUrl',
+        'UtilityBillUrl',
+      ],
+    });
+
+    // Extract rejection reason from the most recent document with admin notes
+    // When admin rejects, all documents for that submission get the same adminNotes
+    let rejectionReason: string | null = null;
+    if (kycDocuments.length > 0) {
+      // Get the most recent document (first in DESC order) and check for admin notes
+      const mostRecentDoc = kycDocuments[0];
+      if (mostRecentDoc.adminNotes) {
+        rejectionReason = mostRecentDoc.adminNotes;
+      }
+    }
+
+    // Format documents for response - each KYC entity contains all 4 document types
+    const documents: Array<{
+      id: number;
+      docType: string;
+      status: string;
+      submittedAt: Date;
+      adminNotes?: string | null;
+    }> = [];
+
+    // For each KYC submission, create entries for each document type
+    kycDocuments.forEach((doc) => {
+      const docTypes = [
+        { type: 'cnic_front', url: doc.CnicFrontUrl },
+        { type: 'cnic_back', url: doc.CnicBackUrl },
+        { type: 'selfie', url: doc.SelfieUrl },
+        { type: 'utility_bill', url: doc.UtilityBillUrl },
+      ];
+
+      docTypes.forEach(({ type, url }) => {
+        if (url) {
+          documents.push({
+            id: doc.id,
+            docType: type,
+            status: user.kycStatus,
+            submittedAt: doc.submittedAt,
+            adminNotes: doc.adminNotes,
+          });
+        }
+      });
+    });
+
     return {
       status: user.kycStatus,
       userId: user.id,
+      rejectionReason,
+      documents: documents.length > 0 ? documents : undefined,
     };
   }
 }

@@ -31,7 +31,6 @@ import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { KycStatusResponseDto } from './dto/kyc-status-response.dto';
 import { KycEntity } from './entity/kyc.entity';
-import { KycStatus } from '../user/entity/user.entity';
 
 @ApiTags('KYC Documents')
 @Controller({
@@ -65,9 +64,7 @@ export class KycController {
     type: KycStatusResponseDto,
   })
   @Roles(RoleEnum.user)
-  async getKycStatus(
-    @Request() req,
-  ): Promise<{ status: KycStatus; userId: number }> {
+  async getKycStatus(@Request() req): Promise<KycStatusResponseDto> {
     const userId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     return this.kycService.getUserKycStatus(userId);

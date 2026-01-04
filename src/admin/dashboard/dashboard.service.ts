@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserEntity, KycStatus } from '../../user/entity/user.entity';
+import { UserEntity, KycStatus, UserRole } from '../../user/entity/user.entity';
 
 @Injectable()
 export class AdminDashboardService {
@@ -13,23 +13,25 @@ export class AdminDashboardService {
   ) {}
 
   async getDashboardStats() {
-    const totalUsers = await this.userRepository.count();
+    const totalUsers = await this.userRepository.count({
+      where: { role: UserRole.USER },
+    });
     const verifiedUsers = await this.userRepository.count({
-      where: { isVerified: true },
+      where: { isVerified: true, role: UserRole.USER },
     });
 
     // Count users by their kycStatus
     const pendingKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.PENDING },
+      where: { kycStatus: KycStatus.PENDING, role: UserRole.USER },
     });
     const approvedKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.APPROVED },
+      where: { kycStatus: KycStatus.APPROVED, role: UserRole.USER },
     });
     const rejectedKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.REJECTED },
+      where: { kycStatus: KycStatus.REJECTED, role: UserRole.USER },
     });
     const inReviewKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.IN_REVIEW },
+      where: { kycStatus: KycStatus.IN_REVIEW, role: UserRole.USER },
     });
     console.log('Pending KYC', pendingKyc);
     console.log('Approved KYC', approvedKyc);

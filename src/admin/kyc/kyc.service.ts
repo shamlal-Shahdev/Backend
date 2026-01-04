@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserEntity, KycStatus } from '../../user/entity/user.entity';
+import { UserEntity, KycStatus, UserRole } from '../../user/entity/user.entity';
 import { KycEntity } from '../../kyc/entity/kyc.entity';
 import { EmailService } from '../../email/email.service';
 import { ApproveKycDto } from './dto/approve-kyc.dto';
@@ -22,6 +22,7 @@ export class AdminKycService {
 
   async getUsersWithKycStatus() {
     const users = await this.userRepository.find({
+      where: { role: UserRole.USER },
       relations: ['kycDocuments'],
       order: { createdAt: 'DESC' },
     });
@@ -162,7 +163,7 @@ export class AdminKycService {
     }
 
     const kycDocuments = await this.kycRepository.find({
-      where: { userId },
+      where: { userId, user: { role: UserRole.USER } },
       order: { submittedAt: 'DESC' },
       relations: ['user'],
     });

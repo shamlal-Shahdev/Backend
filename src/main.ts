@@ -23,7 +23,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
 
   // Security: Add Helmet for HTTP headers protection
-  app.use(helmet());
+  // Configure Helmet to allow images and files
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   const configService = app.get(ConfigService<AllConfigType>);
 
