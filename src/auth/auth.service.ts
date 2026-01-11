@@ -217,11 +217,14 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     try {
       const user = await this.usersService.findByEmail(email);
+      // Security: Always return success message even if user doesn't exist
+      // This prevents email enumeration attacks
       if (!user) {
         this.logger.debug(
           `Password reset requested for non-existent email: ${email}`,
         );
-        throw new UserNotFoundException();
+        // Return success to prevent email enumeration
+        return;
       }
 
       const resetToken = randomStringGenerator();
@@ -232,7 +235,9 @@ export class AuthService {
       this.logger.log(`Password reset email sent to: ${email}`);
     } catch (error) {
       this.logger.error('Error during forgot password process:', error);
-      throw error;
+      // Don't reveal error details to prevent information leakage
+      // Return silently to prevent email enumeration
+      return;
     }
   }
 

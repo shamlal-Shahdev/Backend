@@ -19,6 +19,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { UserEntity as User } from '../user/entity/user.entity';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
 @Controller({
@@ -29,6 +30,7 @@ export class AuthController {
   constructor(private readonly service: AuthService) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @HttpCode(HttpStatus.CREATED)
   @ApiOkResponse({ description: 'User registered successfully' })
   async register(
@@ -43,6 +45,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute to prevent brute force
   @HttpCode(HttpStatus.OK)
   @SerializeOptions({ groups: ['me'] })
   @ApiOkResponse({
@@ -65,11 +68,12 @@ export class AuthController {
     await this.service.verifyEmail(token);
     return {
       message: 'Email verified successfully',
-      redirectUrl: '/', // This points to the login page as per your frontend routes
+      redirectUrl: '/',
     };
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute to prevent abuse
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Password reset email sent' })
   async forgotPassword(
@@ -80,6 +84,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Password reset successfully' })
   async resetPassword(

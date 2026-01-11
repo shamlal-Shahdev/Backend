@@ -12,6 +12,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -41,22 +42,31 @@ export class InstallationController {
   constructor(private readonly installationService: InstallationService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Register a new installation' })
+  @ApiOperation({ summary: 'Submit installation request' })
   @ApiResponse({
     status: 201,
-    description: 'Installation registered successfully',
+    description: 'Installation request submitted successfully',
     type: InstallationEntity,
   })
   @Roles(RoleEnum.user)
   @HttpCode(HttpStatus.CREATED)
-  create(
+  async create(
+    @Request() req,
     @Body() createInstallationDto: CreateInstallationDto,
   ): Promise<InstallationEntity> {
-    return this.installationService.create(createInstallationDto);
+    // Extract userId from JWT token
+    const userId =
+      typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
+
+    // Add userId to DTO
+    return this.installationService.create({
+      ...createInstallationDto,
+      userId,
+    });
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all installations with pagination' })
+  @ApiOperation({ summary: 'Get installations with pagination (filtered by user for regular users)' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({
@@ -65,11 +75,28 @@ export class InstallationController {
     type: [InstallationEntity],
   })
   @Roles(RoleEnum.admin, RoleEnum.user)
-  findAll(
+  async findAll(
+    @Request() req,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    return this.installationService.findAll(page, limit);
+    const userId =
+      typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
+    const userRole = req.user.role;
+
+    // If user is not admin, filter by userId
+    if (userRole !== 'admin') {
+      return this.installationService.findByUserId(userId, page, limit);
+    }
+
+    // Admin sees all installations
+    const [data, total] = await this.installationService.findAll(page, limit);
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
   @Get(':id')
@@ -104,16 +131,30 @@ export class InstallationController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete an installation' })
+  @ApiOperation({ summary: 'Cancel/Delete an installation (users can cancel SUBMITTED, admin can delete any)' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
     status: 204,
-    description: 'Installation deleted successfully',
+    description: 'Installation cancelled/deleted successfully',
   })
   @ApiResponse({ status: 404, description: 'Installation not found' })
-  @Roles(RoleEnum.admin)
+  @ApiResponse({ status: 400, description: 'Cannot cancel - installation status is not SUBMITTED' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  async remove(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    const userId =
+      typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
+    const userRole = req.user.role;
+
+    // If user is not admin, use cancelInstallation (only SUBMITTED status)
+    if (userRole !== 'admin') {
+      return this.installationService.cancelInstallation(id, userId);
+    }
+
+    // Admin can delete any installation
     return this.installationService.remove(id);
   }
 }

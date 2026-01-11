@@ -33,12 +33,36 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
       useFactory: (configService: ConfigService<AllConfigType>) => {
         return {
           fileFilter: (request, file, callback) => {
-            if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+            // Allowed file extensions
+            const allowedExtensions = /\.(jpg|jpeg|png|gif)$/i;
+            // Allowed MIME types for security (prevents file type spoofing)
+            const allowedMimeTypes = [
+              'image/jpeg',
+              'image/jpg',
+              'image/png',
+              'image/gif',
+            ];
+
+            // Validate file extension
+            if (!file.originalname.match(allowedExtensions)) {
               return callback(
                 new UnprocessableEntityException({
                   status: HttpStatus.UNPROCESSABLE_ENTITY,
                   errors: {
-                    file: `cantUploadFileType`,
+                    file: `Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.`,
+                  },
+                }),
+                false,
+              );
+            }
+
+            // Validate MIME type to prevent file type spoofing
+            if (!allowedMimeTypes.includes(file.mimetype)) {
+              return callback(
+                new UnprocessableEntityException({
+                  status: HttpStatus.UNPROCESSABLE_ENTITY,
+                  errors: {
+                    file: `Invalid file MIME type. Only image files are allowed.`,
                   },
                 }),
                 false,

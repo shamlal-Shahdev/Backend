@@ -20,8 +20,10 @@ export enum InstallationType {
 }
 
 export enum InstallationStatus {
-  PENDING = 'pending',
-  VERIFIED = 'verified',
+  SUBMITTED = 'submitted',
+  ASSIGNED = 'assigned',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
   REJECTED = 'rejected',
 }
 
@@ -52,9 +54,12 @@ export class InstallationEntity extends EntityRelationalHelper {
   @Column({
     type: 'enum',
     enum: InstallationStatus,
-    default: InstallationStatus.PENDING,
+    default: InstallationStatus.SUBMITTED,
   })
   status: InstallationStatus;
+
+  @Column({ name: 'vendor_id', type: 'int', nullable: true })
+  vendorId: number | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive: boolean;
@@ -71,6 +76,10 @@ export class InstallationEntity extends EntityRelationalHelper {
   })
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;
+
+  @ManyToOne(() => UserEntity, { nullable: true })
+  @JoinColumn({ name: 'vendor_id' })
+  vendor: UserEntity | null;
 
   @OneToMany(() => DeviceEntity, (device) => device.installation)
   devices: DeviceEntity[];

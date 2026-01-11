@@ -1,43 +1,91 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InstallationEntity } from './entity/installation.entity';
+import {
+  InstallationEntity,
+  InstallationStatus,
+} from './entity/installation.entity';
 import { CreateInstallationDto } from './dto/create-installation.dto';
 import { UpdateInstallationDto } from './dto/update-installation.dto';
+import { UserEntity, UserRole } from '../user/entity/user.entity';
 
 @Injectable()
 export class InstallationService {
   constructor(
     @InjectRepository(InstallationEntity)
     private readonly installationRepository: Repository<InstallationEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   async create(
-    createInstallationDto: CreateInstallationDto,
+    createInstallationDto: CreateInstallationDto & { userId: number },
   ): Promise<InstallationEntity> {
-    const installation = this.installationRepository.create(
-      createInstallationDto,
-    );
+    // Verify vendor exists and is a verified vendor
+    const vendor = await this.userRepository.findOne({
+      where: { id: createInstallationDto.vendorId },
+    });
+
+    if (!vendor) {
+      throw new NotFoundException(
+        `Vendor with ID ${createInstallationDto.vendorId} not found`,
+      );
+    }
+
+    if (vendor.role !== UserRole.VENDOR) {
+      throw new BadRequestException(
+        `User with ID ${createInstallationDto.vendorId} is not a vendor`,
+      );
+    }
+
+    if (!vendor.isVerified) {
+      throw new BadRequestException(
+        `Vendor with ID ${createInstallationDto.vendorId} is not verified`,
+      );
+    }
+
+    const installation = this.installationRepository.create({
+      ...createInstallationDto,
+      status: createInstallationDto.status || InstallationStatus.SUBMITTED,
+    });
     return await this.installationRepository.save(installation);
   }
 
   async findAll(
     page: number = 1,
     limit: number = 10,
+    userId?: number,
   ): Promise<[InstallationEntity[], number]> {
+    const whereCondition = userId ? { userId } : {};
+    
     const [data, total] = await this.installationRepository.findAndCount({
+      where: whereCondition,
       skip: (page - 1) * limit,
       take: limit,
-      relations: ['user'],
+      relations: ['user', 'vendor'],
       order: { registeredAt: 'DESC' },
     });
     return [data, total];
   }
 
+  async findByUserId(
+    userId: number,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ data: InstallationEntity[]; total: number; page: number; limit: number }> {
+    const [data, total] = await this.findAll(page, limit, userId);
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
   async findOne(id: number): Promise<InstallationEntity> {
     const installation = await this.installationRepository.findOne({
       where: { id },
-      relations: ['user', 'devices'],
+      relations: ['user', 'vendor', 'devices'],
     });
 
     if (!installation) {
@@ -58,6 +106,24 @@ export class InstallationService {
 
   async remove(id: number): Promise<void> {
     const installation = await this.findOne(id);
+    await this.installationRepository.remove(installation);
+  }
+
+  async cancelInstallation(id: number, userId: number): Promise<void> {
+    const installation = await this.findOne(id);
+    
+    // Verify installation belongs to the user
+    if (installation.userId !== userId) {
+      throw new NotFoundException('Installation not found');
+    }
+
+    // Only allow cancellation if status is SUBMITTED
+    if (installation.status !== InstallationStatus.SUBMITTED) {
+      throw new BadRequestException(
+        'Installation can only be cancelled when status is SUBMITTED',
+      );
+    }
+
     await this.installationRepository.remove(installation);
   }
 }

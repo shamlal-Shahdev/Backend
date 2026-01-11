@@ -38,4 +38,22 @@ export class EmailService {
       context: { resetLink },
     });
   }
+
+  async sendKycApprovalEmail(to: string, name: string, note?: string) {
+    await this.mailer.sendMail({
+      to,
+      subject: 'KYC Approved - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'kyc-approval.hbs'),
+      context: { name, note },
+    });
+  }
+
+  async sendKycRejectionEmail(to: string, name: string, reason: string) {
+    await this.mailer.sendMail({
+      to,
+      subject: 'KYC Rejected - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'kyc-rejection.hbs'),
+      context: { name, reason },
+    });
+  }
 }

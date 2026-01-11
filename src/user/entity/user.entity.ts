@@ -19,6 +19,7 @@ import { PredictionEntity } from '../../prediction/entity/prediction.entity';
 export enum UserRole {
   USER = 'user',
   ADMIN = 'admin',
+  VENDOR = 'vendor',
 }
 
 export enum KycStatus {

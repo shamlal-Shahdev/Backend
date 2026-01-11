@@ -3,6 +3,7 @@ import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
 // import { KycModule } from './kyc/kyc.module'; // KYC module not found
 import { AdminModule } from './admin/admin.module';
+import { VendorModule } from './vendor/vendor.module';
 import databaseConfig from './database/config/database.config';
 import authConfig from './auth/config/auth.config';
 import appConfig from './config/app.config';
@@ -107,6 +108,7 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
     AuthModule,
     // KycModule, // KYC module not found
     AdminModule,
+    VendorModule,
     SessionModule,
     EmailModule,
     HomeModule,

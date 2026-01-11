@@ -47,11 +47,32 @@ export class FilesS3PresignedService {
       });
     }
 
-    if (!file.fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    // Allowed file extensions
+    const allowedExtensions = /\.(jpg|jpeg|png|gif)$/i;
+    // Allowed MIME types for security (prevents file type spoofing)
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+    ];
+
+    // Validate file extension
+    if (!file.fileName.match(allowedExtensions)) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          file: `cantUploadFileType`,
+          file: `Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.`,
+        },
+      });
+    }
+
+    // Validate MIME type if provided
+    if (file.mimeType && !allowedMimeTypes.includes(file.mimeType)) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          file: `Invalid file MIME type. Only image files are allowed.`,
         },
       });
     }

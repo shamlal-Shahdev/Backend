@@ -79,8 +79,21 @@ export class AdminKycService {
     user.kycStatus = KycStatus.APPROVED;
     await this.userRepository.save(user);
 
-    // TODO: Send approval email when email template is available
-    // await this.emailService.sendKycApprovalEmail(user.email, user.name, dto.note);
+    // Send approval email
+    try {
+      await this.emailService.sendKycApprovalEmail(
+        user.email,
+        user.name,
+        dto.note,
+      );
+      this.logger.log(`KYC approval email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send KYC approval email to ${user.email}:`,
+        error,
+      );
+      // Don't throw error - KYC approval should succeed even if email fails
+    }
 
     this.logger.log(`KYC approved for user ${userId} by admin ${adminId}`);
 
@@ -117,8 +130,21 @@ export class AdminKycService {
     user.kycStatus = KycStatus.REJECTED;
     await this.userRepository.save(user);
 
-    // TODO: Send rejection email when email template is available
-    // await this.emailService.sendKycRejectionEmail(user.email, user.name, dto.reason);
+    // Send rejection email
+    try {
+      await this.emailService.sendKycRejectionEmail(
+        user.email,
+        user.name,
+        dto.reason,
+      );
+      this.logger.log(`KYC rejection email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send KYC rejection email to ${user.email}:`,
+        error,
+      );
+      // Don't throw error - KYC rejection should succeed even if email fails
+    }
 
     this.logger.log(`KYC rejected for user ${userId} by admin ${adminId}`);
 

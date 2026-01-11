@@ -20,7 +20,29 @@ import { AllConfigType } from './config/config.type';
 import { ResolvePromisesInterceptor } from './utils/serializer.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
+
+  // Security: Configure CORS based on environment
+  const configService = app.get(ConfigService<AllConfigType>);
+  const frontendUrl = configService.get('app.frontendUrl', { infer: true });
+  const nodeEnv = configService.get('app.nodeEnv', { infer: true });
+  
+  // In production, use specific origin; in development, allow localhost origins
+  const allowedOrigins = nodeEnv === 'production' 
+    ? [frontendUrl].filter(Boolean)
+    : [
+        frontendUrl,
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:5174',
+      ].filter(Boolean);
+
+  app.enableCors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-custom-lang'],
+  });
 
   // Security: Add Helmet for HTTP headers protection
   // Configure Helmet to allow images and files
@@ -28,10 +50,17 @@ async function bootstrap() {
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
       crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
     }),
   );
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
-  const configService = app.get(ConfigService<AllConfigType>);
 
   app.enableShutdownHooks();
   app.setGlobalPrefix(

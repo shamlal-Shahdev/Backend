@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsInt,
   IsString,
   IsEnum,
   IsNumber,
@@ -16,10 +15,6 @@ import {
 } from '../entity/installation.entity';
 
 export class CreateInstallationDto {
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  userId: number;
-
   @ApiProperty({ example: 'Solar Farm Alpha' })
   @IsString()
   @MinLength(1)
@@ -44,9 +39,14 @@ export class CreateInstallationDto {
   @MaxLength(500)
   location: string;
 
+  @ApiProperty({ example: 1, description: 'Vendor ID - User selects vendor from dropdown' })
+  @IsNumber()
+  @Min(1)
+  vendorId: number;
+
   @ApiProperty({
     enum: InstallationStatus,
-    default: InstallationStatus.PENDING,
+    default: InstallationStatus.SUBMITTED,
     required: false,
   })
   @IsOptional()
