@@ -33,6 +33,12 @@ export class CreateUserDto {
   @MaxLength(20)
   phone?: string;
 
+  @ApiProperty({ example: 'Solar Energy Solutions', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  companyName?: string;
+
   @ApiProperty({ example: 'hashed_password_string' })
   @IsString()
   passwordHash: string;

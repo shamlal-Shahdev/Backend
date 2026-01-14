@@ -71,6 +71,7 @@ export class VendorAuthService {
         resetToken: null,
         kycStatus: 'not_submitted',
         phone: vendorRegisterDto.phone,
+        companyName: vendorRegisterDto.companyName,
         role: UserRole.VENDOR,
       } as CreateUserDto);
 
@@ -114,7 +115,9 @@ export class VendorAuthService {
         this.logger.warn(
           `❌ Vendor login attempt with non-existent email: ${normalizedEmail}`,
         );
-        throw new UserNotFoundException('Invalid credentials');
+        throw new UserNotFoundException(
+          'This email is not registered. Please register first to create a vendor account.',
+        );
       }
 
       this.logger.log(
@@ -180,23 +183,19 @@ export class VendorAuthService {
 
       const user = await this.usersService.findByEmail(email);
       
-      // Security: Always return success message even if user doesn't exist
-      // This prevents email enumeration attacks
       if (!user) {
-        this.logger.debug(
+        this.logger.warn(
           `Password reset requested for non-existent vendor email: ${email}`,
         );
-        // Return success to prevent email enumeration
-        return;
+        throw new UserNotFoundException();
       }
 
       // Verify user is a vendor
       if (user.role !== UserRole.VENDOR) {
-        this.logger.debug(
+        this.logger.warn(
           `Password reset requested for non-vendor email: ${email}`,
         );
-        // Return success to prevent role enumeration
-        return;
+        throw new ForbiddenException('This email is not registered as a vendor');
       }
 
       const resetToken = randomStringGenerator();
@@ -207,9 +206,7 @@ export class VendorAuthService {
       this.logger.log(`Password reset email sent to vendor: ${email}`);
     } catch (error) {
       this.logger.error('Error during vendor forgot password process:', error);
-      // Don't reveal error details to prevent information leakage
-      // Return silently to prevent email enumeration
-      return;
+      throw error;
     }
   }
 

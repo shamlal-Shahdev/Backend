@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Patch,
   Query,
   Request,
   SerializeOptions,
@@ -20,6 +21,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { UserEntity as User } from '../user/entity/user.entity';
 import { Throttle } from '@nestjs/throttler';
+import { UpdateUserDto } from '../user/dto/update-user.dto';
 
 @ApiTags('Auth')
 @Controller({
@@ -60,15 +62,18 @@ export class AuthController {
   @ApiOkResponse({ description: 'Email verified successfully' })
   async verifyEmail(
     @Query('token') token: string,
-  ): Promise<{ message: string; redirectUrl: string }> {
+  ): Promise<{ message: string; redirectUrl: string; role: string }> {
     if (!token) {
       throw new Error('Verification token is required');
     }
     console.log('Verification Token:', token);
-    await this.service.verifyEmail(token);
+    const { role } = await this.service.verifyEmail(token);
+    // Determine redirect URL based on user role
+    const redirectUrl = role === 'vendor' ? '/vendor/login' : '/';
     return {
       message: 'Email verified successfully',
-      redirectUrl: '/',
+      redirectUrl,
+      role,
     };
   }
 
@@ -111,5 +116,22 @@ export class AuthController {
     // But we'll use the service method to ensure we get the latest data from database
     const user = req.user as User;
     return this.service.me({ id: user.id, email: user.email });
+  }
+
+  @Patch('me')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @SerializeOptions({ groups: ['me'] })
+  @ApiOkResponse({
+    description: 'Profile updated successfully',
+    type: User,
+  })
+  async updateProfile(
+    @Request() req,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    const user = req.user as User;
+    return this.service.updateMe(user.id.toString(), updateUserDto);
   }
 }

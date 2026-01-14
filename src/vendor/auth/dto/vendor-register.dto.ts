@@ -25,6 +25,11 @@ export class VendorRegisterDto {
   @IsString()
   phone: string;
 
+  @ApiProperty({ example: 'Solar Energy Solutions', type: String })
+  @IsNotEmpty()
+  @IsString()
+  companyName: string;
+
   @ApiProperty({ example: 'password123', type: String })
   @IsNotEmpty()
   @MinLength(6)

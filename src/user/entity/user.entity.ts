@@ -50,6 +50,9 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', length: 20, nullable: true })
   phone: string | null;
 
+  @Column({ name: 'company_name', type: 'varchar', length: 255, nullable: true })
+  companyName: string | null;
+
   @Column({ name: 'password_hash', type: 'varchar', length: 255 })
   passwordHash: string;
 

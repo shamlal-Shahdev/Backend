@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -126,4 +126,19 @@ export class InstallationService {
 
     await this.installationRepository.remove(installation);
   }
+
+  async getUserInstallations(userId: number): Promise<InstallationEntity[]> {
+    try {
+      console.log('userId', userId);
+      const installations = await this.installationRepository.find({
+        where: { userId },
+      });
+      console.log('installations', installations);
+      return installations;
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to get user installations');
+    }
+     
+  }
 }
+

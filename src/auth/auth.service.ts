@@ -194,7 +194,7 @@ export class AuthService {
     }
   }
 
-  async verifyEmail(token: string): Promise<void> {
+  async verifyEmail(token: string): Promise<{ role: string }> {
     try {
       console.log('Verification Token:', token);
       const user = await this.usersService.findByVerificationToken(token);
@@ -208,6 +208,7 @@ export class AuthService {
         verificationToken: null as any,
       });
       this.logger.log(`Email verified successfully for user: ${user.email}`);
+      return { role: user.role };
     } catch (error) {
       this.logger.error('Error during email verification:', error);
       throw error;
@@ -217,14 +218,11 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     try {
       const user = await this.usersService.findByEmail(email);
-      // Security: Always return success message even if user doesn't exist
-      // This prevents email enumeration attacks
       if (!user) {
-        this.logger.debug(
+        this.logger.warn(
           `Password reset requested for non-existent email: ${email}`,
         );
-        // Return success to prevent email enumeration
-        return;
+        throw new UserNotFoundException();
       }
 
       const resetToken = randomStringGenerator();
@@ -235,9 +233,7 @@ export class AuthService {
       this.logger.log(`Password reset email sent to: ${email}`);
     } catch (error) {
       this.logger.error('Error during forgot password process:', error);
-      // Don't reveal error details to prevent information leakage
-      // Return silently to prevent email enumeration
-      return;
+      throw error;
     }
   }
 

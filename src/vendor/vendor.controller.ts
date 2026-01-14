@@ -58,7 +58,7 @@ export class VendorController {
         role: UserRole.VENDOR,
         isVerified: verified,
       },
-      select: ['id', 'name', 'email', 'phone', 'isVerified', 'role'],
+      select: ['id', 'name', 'email', 'phone', 'companyName', 'isVerified', 'role'],
       order: { name: 'ASC' },
     });
 

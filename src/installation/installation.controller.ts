@@ -157,4 +157,17 @@ export class InstallationController {
     // Admin can delete any installation
     return this.installationService.remove(id);
   }
+
+  @Get('user/installations')
+  @ApiOperation({ summary: 'Get all installations for a user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Installations retrieved successfully',
+    type: [InstallationEntity],
+  })
+  @Roles(RoleEnum.user)
+  async getUserInstallations(@Request() req): Promise<InstallationEntity[]> {
+    const userId = typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
+    return this.installationService.getUserInstallations(userId);
+  }
 }
