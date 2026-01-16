@@ -25,11 +25,11 @@ export class EmailService {
     });
   }
 
-  async sendResetPasswordEmail(to: string, token: string) {
+  async sendResetPasswordEmail(to: string, token: string, routePath: string = '/reset-password') {
     const frontendUrl = this.configService.getOrThrow('app.frontendUrl', {
       infer: true,
     });
-    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+    const resetLink = `${frontendUrl}${routePath}?token=${token}`;
 
     await this.mailer.sendMail({
       to,

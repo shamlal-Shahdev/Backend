@@ -202,7 +202,8 @@ export class VendorAuthService {
       await this.usersService.update(user.id, {
         resetToken: resetToken as any,
       });
-      await this.emailService.sendResetPasswordEmail(email, resetToken);
+      // Use vendor-specific reset password route
+      await this.emailService.sendResetPasswordEmail(email, resetToken, '/vendor/reset-password');
       this.logger.log(`Password reset email sent to vendor: ${email}`);
     } catch (error) {
       this.logger.error('Error during vendor forgot password process:', error);
