@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<body>
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+<h1 style="color: #4CAF50;">Reward Generated Successfully - WattsUp Energy</h1>
+<p>Dear {{name}},</p>
+<p>Great news! Your reward for energy generation verification for <strong>{{month}}/{{year}}</strong> has been successfully generated on the blockchain.</p>
+{{#if rewardAmount}}
+<p><strong>Reward Amount:</strong> <span style="font-size: 18px; font-weight: bold; color: #4CAF50;">{{rewardAmount}} tokens</span></p>
+{{/if}}
+{{#if transactionHash}}
+<p><strong>Transaction Hash:</strong></p>
+<p style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all;">{{transactionHash}}</p>
+<p>You can view this transaction on the blockchain explorer using the transaction hash above.</p>
+{{/if}}
+<p>Your reward tokens have been added to your wallet. You can check your balance by logging into your account.</p>
+<p>Thank you for contributing to clean energy generation!</p>
+<p>Best regards,<br>WattsUp Energy Team</p>
+</div>
+</body>
+</html>
+
+

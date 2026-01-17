@@ -89,7 +89,7 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto): Promise<{ token: string; user: User }> {
+  async login(loginDto: LoginDto): Promise<{ token: string; user: any }> {
     try {
       // Normalize email to lowercase for consistent lookup
       const normalizedEmail = loginDto.email?.toLowerCase().trim();
@@ -175,7 +175,24 @@ export class AuthService {
       this.logger.log(
         `✅ User logged in successfully: ${user.email} (ID: ${user.id})`,
       );
-      return { token, user };
+      
+      // Return plain object to avoid circular reference issues during serialization
+      // Exclude passwordHash and relation properties
+      const userResponse = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        walletAddress: user.walletAddress,
+        phone: user.phone,
+        companyName: user.companyName,
+        role: user.role,
+        isVerified: user.isVerified,
+        kycStatus: user.kycStatus,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+      
+      return { token, user: userResponse }; 
     } catch (error) {
       this.logger.error('❌ Error during login:', error);
       this.logger.error(`❌ Error type: ${error?.constructor?.name}`);

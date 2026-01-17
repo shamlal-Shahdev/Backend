@@ -7,6 +7,7 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { EntityRelationalHelper } from '../../utils/relational-entity-helper';
 import { KycEntity } from '../../kyc/entity/kyc.entity';
 import { InstallationEntity } from '../../installation/entity/installation.entity';
@@ -15,6 +16,7 @@ import { WalletBalanceEntity } from '../../wallet-balance/entity/wallet-balance.
 import { RedemptionEntity } from '../../redemption/entity/redemption.entity';
 import { CertificateEntity } from '../../certificate/entity/certificate.entity';
 import { PredictionEntity } from '../../prediction/entity/prediction.entity';
+import { EnergyRequestEntity } from '../../energy-request/entity/energy-request.entity';
 
 export enum UserRole {
   USER = 'user',
@@ -105,28 +107,39 @@ export class UserEntity extends EntityRelationalHelper {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  // Relations
+  // Relations - Excluded from serialization to prevent circular references
   @OneToMany(() => KycEntity, (kycDocument) => kycDocument.user)
+  @Exclude({ toPlainOnly: true })
   kycDocuments: KycEntity[];
 
   @OneToMany(() => InstallationEntity, (installation) => installation.user)
+  @Exclude({ toPlainOnly: true })
   installations: InstallationEntity[];
 
   @OneToMany(
     () => RewardTransactionEntity,
     (rewardTransaction) => rewardTransaction.user,
   )
+  @Exclude({ toPlainOnly: true })
   rewardTransactions: RewardTransactionEntity[];
 
   @OneToOne(() => WalletBalanceEntity, (walletBalance) => walletBalance.user)
+  @Exclude({ toPlainOnly: true })
   walletBalance: WalletBalanceEntity;
 
   @OneToMany(() => RedemptionEntity, (redemption) => redemption.user)
+  @Exclude({ toPlainOnly: true })
   redemptions: RedemptionEntity[];
 
   @OneToMany(() => CertificateEntity, (certificate) => certificate.user)
+  @Exclude({ toPlainOnly: true })
   certificates: CertificateEntity[];
 
   @OneToMany(() => PredictionEntity, (prediction) => prediction.user)
+  @Exclude({ toPlainOnly: true })
   predictions: PredictionEntity[];
+
+  @OneToMany(() => EnergyRequestEntity, (energyRequest) => energyRequest.user)
+  @Exclude({ toPlainOnly: true })
+  energyRequests: EnergyRequestEntity[];
 }

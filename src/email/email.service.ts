@@ -56,4 +56,126 @@ export class EmailService {
       context: { name, reason },
     });
   }
+
+  async sendEnergyRequestSubmittedEmail(
+    to: string,
+    name: string,
+    month: number,
+    year: number,
+  ) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    await this.mailer.sendMail({
+      to,
+      subject: 'Energy Request Submitted - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'energy-request-submitted.hbs'),
+      context: { name, month: monthNames[month - 1], year },
+    });
+  }
+
+  async sendEnergyRequestApprovedEmail(
+    to: string,
+    name: string,
+    month: number,
+    year: number,
+    note?: string,
+  ) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    await this.mailer.sendMail({
+      to,
+      subject: 'Energy Request Approved - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'energy-request-approved.hbs'),
+      context: { name, month: monthNames[month - 1], year, note },
+    });
+  }
+
+  async sendEnergyRequestRejectedEmail(
+    to: string,
+    name: string,
+    month: number,
+    year: number,
+    reason: string,
+  ) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    await this.mailer.sendMail({
+      to,
+      subject: 'Energy Request Rejected - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'energy-request-rejected.hbs'),
+      context: { name, month: monthNames[month - 1], year, reason },
+    });
+  }
+
+  async sendEnergyRewardGeneratedEmail(
+    to: string,
+    name: string,
+    month: number,
+    year: number,
+    rewardAmount?: number,
+    transactionHash?: string,
+  ) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    await this.mailer.sendMail({
+      to,
+      subject: 'Reward Generated Successfully - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'energy-reward-generated.hbs'),
+      context: {
+        name,
+        month: monthNames[month - 1],
+        year,
+        rewardAmount,
+        transactionHash,
+      },
+    });
+  }
 }

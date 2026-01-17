@@ -62,7 +62,7 @@ export class FilesLocalController {
   @Header('Access-Control-Allow-Origin', '*')
   @Header('Access-Control-Allow-Methods', 'GET')
   @Header('Access-Control-Allow-Headers', 'Content-Type')
-  download(@Req() request: any, @Res() response) {
+  download(@Req() request: any, @Res() response): void {
     // Get the full path from the request URL
     // Remove the base path: /api/v1/files/
     const url = request.url;
@@ -82,9 +82,10 @@ export class FilesLocalController {
 
     // Check if file exists
     if (!existsSync(fullFilePath)) {
-      return response
+      response
         .status(404)
         .json({ message: 'File not found', path: decodedPath });
+      return;
     }
 
     // Set appropriate content type for images
@@ -106,7 +107,13 @@ export class FilesLocalController {
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET');
 
-    // Send the file
-    return response.sendFile(fullFilePath);
+    // Send the file - don't return the response to avoid serialization issues
+    response.sendFile(fullFilePath, (err) => {
+      if (err) {
+        if (!response.headersSent) {
+          response.status(500).json({ message: 'Error serving file', error: err.message });
+        }
+      }
+    });
   }
 }

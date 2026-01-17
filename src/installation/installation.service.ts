@@ -44,6 +44,28 @@ export class InstallationService {
       );
     }
 
+    // Check if user has a rejected installation that can be resubmitted
+    const existingRejected = await this.installationRepository.findOne({
+      where: {
+        userId: createInstallationDto.userId,
+        status: InstallationStatus.REJECTED,
+      },
+      order: { registeredAt: 'DESC' },
+    });
+
+    // If rejected installation exists, update it instead of creating new one
+    if (existingRejected) {
+      existingRejected.name = createInstallationDto.name;
+      existingRejected.installationType = createInstallationDto.installationType;
+      existingRejected.capacityKw = createInstallationDto.capacityKw;
+      existingRejected.location = createInstallationDto.location;
+      existingRejected.vendorId = createInstallationDto.vendorId;
+      existingRejected.status = InstallationStatus.SUBMITTED;
+      existingRejected.registeredAt = new Date();
+      return await this.installationRepository.save(existingRejected);
+    }
+
+    // Create new installation if no rejected one exists
     const installation = this.installationRepository.create({
       ...createInstallationDto,
       status: createInstallationDto.status || InstallationStatus.SUBMITTED,

@@ -5,6 +5,7 @@ import { AdminUsersModule } from './users/users.module';
 import { AdminDashboardModule } from './dashboard/dashboard.module';
 import { AdminAuditModule } from './audit/audit.module';
 import { AdminInstallationModule } from './installation/installation.module';
+import { AdminEnergyRequestModule } from './energy-request/energy-request.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AdminInstallationModule } from './installation/installation.module';
     AdminDashboardModule,
     AdminAuditModule,
     AdminInstallationModule,
+    AdminEnergyRequestModule,
   ],
   exports: [
     AdminAuthModule,
@@ -22,6 +24,7 @@ import { AdminInstallationModule } from './installation/installation.module';
     AdminDashboardModule,
     AdminAuditModule,
     AdminInstallationModule,
+    AdminEnergyRequestModule,
   ],
 })
 export class AdminModule {}

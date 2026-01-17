@@ -92,7 +92,7 @@ export class UserService {
       where: { email },
     });
   }
-
+  
   async findByVerificationToken(token: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { verificationToken: token },

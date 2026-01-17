@@ -36,6 +36,7 @@ import { RedemptionModule } from './redemption/redemption.module';
 import { CertificateModule } from './certificate/certificate.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { PredictionResultModule } from './prediction-result/prediction-result.module';
+import { EnergyRequestModule } from './energy-request/energy-request.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -126,6 +127,7 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
     CertificateModule,
     PredictionModule,
     PredictionResultModule,
+    EnergyRequestModule,
   ],
   providers: [
     {
