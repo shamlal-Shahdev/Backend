@@ -43,6 +43,13 @@ export class UserEntity extends EntityRelationalHelper {
   })
   walletAddress: string;
 
+  @Column({
+    name: 'encrypted_private_key',
+    type: 'text',
+    nullable: true,
+  })
+  encryptedPrivateKey: string | null;
+
   @Column({ type: 'varchar', length: 255 })
   name: string;
 

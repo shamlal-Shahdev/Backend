@@ -7,6 +7,8 @@ import { EmailService } from '../../email/email.service';
 import { ApproveKycDto } from './dto/approve-kyc.dto';
 import { RejectKycDto } from './dto/reject-kyc.dto';
 import { RequestDocumentsDto } from './dto/request-documents.dto';
+import { WalletService } from '../../blockchain/wallet.service';
+import { WalletBalanceService } from '../../wallet-balance/wallet-balance.service';
 
 @Injectable()
 export class AdminKycService {
@@ -18,6 +20,8 @@ export class AdminKycService {
     @InjectRepository(KycEntity)
     private readonly kycRepository: Repository<KycEntity>,
     private readonly emailService: EmailService,
+    private readonly walletService: WalletService,
+    private readonly walletBalanceService: WalletBalanceService,
   ) {}
 
   async getUsersWithKycStatus() {
@@ -77,6 +81,19 @@ export class AdminKycService {
 
     // Update user KYC status
     user.kycStatus = KycStatus.APPROVED;
+
+    // Create wallet if user doesn't have one yet
+    if (!user.walletAddress || !user.encryptedPrivateKey) {
+      const { address, encryptedPrivateKey } = this.walletService.createWallet();
+      user.walletAddress = address;
+      user.encryptedPrivateKey = encryptedPrivateKey;
+      this.logger.log(`Created blockchain wallet for user ${userId}: ${address}`);
+
+      // Create wallet balance record
+      await this.walletBalanceService.getOrCreateWalletBalance(userId);
+      this.logger.log(`Created wallet balance record for user ${userId}`);
+    }
+
     await this.userRepository.save(user);
 
     // Send approval email

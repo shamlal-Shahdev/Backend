@@ -12,6 +12,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -72,6 +73,20 @@ export class WalletBalanceController {
     return this.walletBalanceService.findAll(page, limit);
   }
 
+  @Get('my-balance')
+  @ApiOperation({ summary: 'Get current user wallet balance (synced from blockchain)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet balance retrieved successfully',
+    type: WalletBalanceEntity,
+  })
+  @ApiResponse({ status: 404, description: 'User wallet not found' })
+  @Roles(RoleEnum.user)
+  async getMyBalance(@Request() req): Promise<WalletBalanceEntity> {
+    const user = req.user;
+    return await this.walletBalanceService.syncBalanceFromBlockchain(user.id);
+  }
+
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get wallet balance by user ID' })
   @ApiParam({ name: 'userId', type: Number })
@@ -86,6 +101,22 @@ export class WalletBalanceController {
     @Param('userId', ParseIntPipe) userId: number,
   ): Promise<WalletBalanceEntity> {
     return this.walletBalanceService.findByUserId(userId);
+  }
+
+  @Get('user/:userId/sync')
+  @ApiOperation({ summary: 'Sync wallet balance from blockchain for a user' })
+  @ApiParam({ name: 'userId', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet balance synced successfully',
+    type: WalletBalanceEntity,
+  })
+  @ApiResponse({ status: 404, description: 'User wallet not found' })
+  @Roles(RoleEnum.admin)
+  syncUserBalance(
+    @Param('userId', ParseIntPipe) userId: number,
+  ): Promise<WalletBalanceEntity> {
+    return this.walletBalanceService.syncBalanceFromBlockchain(userId);
   }
 
   @Get(':id')

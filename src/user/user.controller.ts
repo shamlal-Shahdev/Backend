@@ -12,6 +12,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,9 +27,11 @@ import { Roles } from '../roles/roles.decorator';
 import { RolesGuard } from '../roles/roles.guard';
 import { RoleEnum } from '../roles/roles.enum';
 import { UserService } from './user.service';
+import { DashboardService } from './dashboard.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from './entity/user.entity';
+import { DashboardResponseDto } from './dto/dashboard-response.dto';
 
 @ApiTags('Users')
 @Controller({
@@ -38,7 +41,10 @@ import { UserEntity } from './entity/user.entity';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly dashboardService: DashboardService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
@@ -69,6 +75,19 @@ export class UserController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
     return this.userService.findAll(page, limit);
+  }
+
+  @Get('dashboard/user')
+  @ApiOperation({ summary: 'Get user dashboard data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard data retrieved successfully',
+    type: DashboardResponseDto,
+  })
+  @Roles(RoleEnum.user)
+  async getUserDashboard(@Request() req): Promise<DashboardResponseDto> {
+    const user = req.user;
+    return await this.dashboardService.getUserDashboard(user.id);
   }
 
   @Get(':id')

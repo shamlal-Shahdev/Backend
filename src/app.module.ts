@@ -39,7 +39,7 @@ import { PredictionResultModule } from './prediction-result/prediction-result.mo
 import { EnergyRequestModule } from './energy-request/energy-request.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-
+import { BlockchainModule } from './blockchain/blockchain.module';
 // <database-block>
 const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
   .isDocumentDatabase
@@ -128,6 +128,9 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
     PredictionModule,
     PredictionResultModule,
     EnergyRequestModule,
+    PredictionResultModule,
+    EnergyRequestModule,
+    BlockchainModule,
   ],
   providers: [
     {

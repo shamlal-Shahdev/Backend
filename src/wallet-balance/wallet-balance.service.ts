@@ -2,18 +2,26 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WalletBalanceEntity } from './entity/wallet-balance.entity';
 import { CreateWalletBalanceDto } from './dto/create-wallet-balance.dto';
 import { UpdateWalletBalanceDto } from './dto/update-wallet-balance.dto';
+import { TokenService } from '../blockchain/token.service';
+import { UserEntity } from '../user/entity/user.entity';
 
 @Injectable()
 export class WalletBalanceService {
+  private readonly logger = new Logger(WalletBalanceService.name);
+
   constructor(
     @InjectRepository(WalletBalanceEntity)
     private readonly walletBalanceRepository: Repository<WalletBalanceEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+    private readonly tokenService: TokenService,
   ) {}
 
   async create(
@@ -88,5 +96,81 @@ export class WalletBalanceService {
   async remove(id: number): Promise<void> {
     const walletBalance = await this.findOne(id);
     await this.walletBalanceRepository.remove(walletBalance);
+  }
+
+  /**
+   * Create or get wallet balance for a user
+   * Auto-creates if doesn't exist
+   */
+  async getOrCreateWalletBalance(userId: number): Promise<WalletBalanceEntity> {
+    let walletBalance = await this.walletBalanceRepository.findOne({
+      where: { userId },
+    });
+
+    if (!walletBalance) {
+      walletBalance = this.walletBalanceRepository.create({
+        userId,
+        balance: 0,
+      });
+      walletBalance = await this.walletBalanceRepository.save(walletBalance);
+      this.logger.log(`Created wallet balance for user ${userId}`);
+    }
+
+    return walletBalance;
+  }
+
+  /**
+   * Sync balance from blockchain to database
+   */
+  async syncBalanceFromBlockchain(userId: number): Promise<WalletBalanceEntity> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (!user.walletAddress) {
+      throw new NotFoundException(
+        `User ${userId} does not have a wallet address`,
+      );
+    }
+
+    // Get balance from blockchain
+    const blockchainBalance = await this.tokenService.getUserBalance(
+      user.walletAddress,
+    );
+
+    // Get or create wallet balance record
+    let walletBalance = await this.walletBalanceRepository.findOne({
+      where: { userId },
+    });
+
+    if (!walletBalance) {
+      walletBalance = this.walletBalanceRepository.create({
+        userId,
+        balance: parseFloat(blockchainBalance.formatted),
+      });
+    } else {
+      walletBalance.balance = parseFloat(blockchainBalance.formatted);
+    }
+
+    walletBalance = await this.walletBalanceRepository.save(walletBalance);
+    this.logger.log(
+      `Synced balance for user ${userId}: ${blockchainBalance.formatted} WATT`,
+    );
+
+    return walletBalance;
+  }
+
+  /**
+   * Update balance after token mint/reward
+   */
+  async updateBalanceAfterReward(
+    userId: number,
+    rewardAmount: number,
+  ): Promise<WalletBalanceEntity> {
+    const walletBalance = await this.getOrCreateWalletBalance(userId);
+    walletBalance.balance = (walletBalance.balance || 0) + rewardAmount;
+    return await this.walletBalanceRepository.save(walletBalance);
   }
 }

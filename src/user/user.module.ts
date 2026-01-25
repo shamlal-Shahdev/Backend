@@ -4,11 +4,29 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { UserEntity } from './entity/user.entity';
 import { KycEntity } from '../kyc/entity/kyc.entity';
+import { DashboardService } from './dashboard.service';
+import { EnergyReadingEntity } from '../energy-reading/entity/energy-reading.entity';
+import { WalletBalanceEntity } from '../wallet-balance/entity/wallet-balance.entity';
+import { CertificateEntity } from '../certificate/entity/certificate.entity';
+import { RewardTransactionEntity } from '../reward-transaction/entity/reward-transaction.entity';
+import { PredictionEntity } from '../prediction/entity/prediction.entity';
+import { InstallationEntity } from '../installation/entity/installation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity, KycEntity])],
+  imports: [
+    TypeOrmModule.forFeature([
+      UserEntity,
+      KycEntity,
+      EnergyReadingEntity,
+      WalletBalanceEntity,
+      CertificateEntity,
+      RewardTransactionEntity,
+      PredictionEntity,
+      InstallationEntity,
+    ]),
+  ],
   controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
+  providers: [UserService, DashboardService],
+  exports: [UserService, DashboardService],
 })
 export class UserModule {}

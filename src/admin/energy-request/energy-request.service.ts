@@ -13,6 +13,8 @@ import { ApproveEnergyRequestDto } from '../../energy-request/dto/approve-energy
 import { RejectEnergyRequestDto } from '../../energy-request/dto/reject-energy-request.dto';
 import { KycEntity } from '../../kyc/entity/kyc.entity';
 import { EmailService } from '../../email/email.service';
+import { TokenService } from '../../blockchain/token.service';
+import { WalletBalanceService } from '../../wallet-balance/wallet-balance.service';
 
 @Injectable()
 export class AdminEnergyRequestService {
@@ -26,6 +28,8 @@ export class AdminEnergyRequestService {
     @InjectRepository(KycEntity)
     private readonly kycRepository: Repository<KycEntity>,
     private readonly emailService: EmailService,
+    private readonly tokenService: TokenService,
+    private readonly walletBalanceService: WalletBalanceService,
   ) {}
 
   /**
@@ -132,54 +136,6 @@ export class AdminEnergyRequestService {
   }
 
   /**
-   * Trigger smart contract to generate reward
-   * This is a placeholder - actual implementation would interact with blockchain
-   */
-  private async triggerBlockchainReward(
-    user: UserEntity,
-    rewardAmount: number,
-  ): Promise<{ success: boolean; txHash: string | null; error: string | null }> {
-    try {
-      this.logger.log(
-        `Triggering blockchain reward for user ${user.id}: ${rewardAmount} tokens to ${user.walletAddress}`,
-      );
-
-      // TODO: Implement actual blockchain smart contract interaction
-      // Example structure:
-      // const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-      // const tx = await contract.mintReward(user.walletAddress, rewardAmount);
-      // await tx.wait();
-      // return { success: true, txHash: tx.hash, error: null };
-
-      // Placeholder implementation
-      const mockTxHash = `0x${Math.random().toString(16).substring(2).padStart(64, '0')}`;
-
-      // Simulate blockchain delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Simulate occasional failures (10% failure rate)
-      if (Math.random() < 0.1) {
-        this.logger.error(`Blockchain transaction failed for user ${user.id}`);
-        return {
-          success: false,
-          txHash: null,
-          error: 'Blockchain transaction failed: Insufficient gas or network error',
-        };
-      }
-
-      this.logger.log(`Blockchain transaction successful: ${mockTxHash}`);
-      return { success: true, txHash: mockTxHash, error: null };
-    } catch (error) {
-      this.logger.error(`Blockchain error for user ${user.id}:`, error);
-      return {
-        success: false,
-        txHash: null,
-        error: error instanceof Error ? error.message : 'Unknown blockchain error',
-      };
-    }
-  }
-
-  /**
    * Approve energy request and generate reward
    */
   async approveEnergyRequest(
@@ -247,6 +203,23 @@ export class AdminEnergyRequestService {
       this.logger.log(
         `Request ${requestId} approved and reward generated. TX: ${blockchainResult.txHash}`,
       );
+
+      // Update wallet balance in database
+      try {
+        await this.walletBalanceService.updateBalanceAfterReward(
+          request.userId,
+          rewardAmount,
+        );
+        this.logger.log(
+          `Updated wallet balance for user ${request.userId} with reward ${rewardAmount}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to update wallet balance for user ${request.userId}:`,
+          error,
+        );
+        // Don't throw - reward was already minted on blockchain
+      }
     } else {
       request.status = EnergyRequestStatus.BLOCKCHAIN_FAILED;
       request.adminRemark = `Blockchain transaction failed: ${blockchainResult.error || 'Unknown error'}. ${dto.remark || ''}`.trim();
@@ -348,5 +321,46 @@ export class AdminEnergyRequestService {
 
     return savedRequest;
   }
+
+    /**
+   * Trigger smart contract to generate reward
+   */
+    private async triggerBlockchainReward(
+      user: UserEntity,
+      rewardAmount: number,
+    ): Promise<{ success: boolean; txHash: string | null; error: string | null }> {
+      try {
+        this.logger.log(
+          `Triggering blockchain reward for user ${user.id}: ${rewardAmount} tokens to ${user.walletAddress}`,
+        );
+  
+        const { txHash } = await this.tokenService.mintTo(
+          user.walletAddress,
+          rewardAmount,
+        );
+  
+        this.logger.log(`Blockchain transaction successful: ${txHash}`);
+  
+        return {
+          success: true,
+          txHash,
+          error: null,
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown blockchain error';
+  
+        this.logger.error(
+          `Blockchain error for user ${user.id}: ${message}`,
+          error,
+        );
+  
+        return {
+          success: false,
+          txHash: null,
+          error: message,
+        };
+      }
+    }
 }
 

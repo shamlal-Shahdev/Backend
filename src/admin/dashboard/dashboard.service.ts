@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity, KycStatus, UserRole } from '../../user/entity/user.entity';
+import { InstallationEntity, InstallationStatus } from '../../installation/entity/installation.entity';
+import { EnergyRequestEntity, EnergyRequestStatus } from '../../energy-request/entity/energy-request.entity';
 
 @Injectable()
 export class AdminDashboardService {
@@ -10,16 +12,13 @@ export class AdminDashboardService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(InstallationEntity)
+    private readonly installationRepository: Repository<InstallationEntity>,
+    @InjectRepository(EnergyRequestEntity)
+    private readonly energyRequestRepository: Repository<EnergyRequestEntity>,
   ) {}
 
   async getDashboardStats() {
-    const totalUsers = await this.userRepository.count({
-      where: { role: UserRole.USER },
-    });
-    const verifiedUsers = await this.userRepository.count({
-      where: { isVerified: true, role: UserRole.USER },
-    });
-
     // Count users by their kycStatus
     const pendingKyc = await this.userRepository.count({
       where: { kycStatus: KycStatus.PENDING, role: UserRole.USER },
@@ -33,21 +32,61 @@ export class AdminDashboardService {
     const inReviewKyc = await this.userRepository.count({
       where: { kycStatus: KycStatus.IN_REVIEW, role: UserRole.USER },
     });
-    console.log('Pending KYC', pendingKyc);
-    console.log('Approved KYC', approvedKyc);
-    console.log('Rejected KYC', rejectedKyc);
-    console.log('In Review KYC', inReviewKyc);
+
+    // Count installations by status
+    const submittedInstallations = await this.installationRepository.count({
+      where: { status: InstallationStatus.SUBMITTED },
+    });
+    const assignedInstallations = await this.installationRepository.count({
+      where: { status: InstallationStatus.ASSIGNED },
+    });
+    const inProgressInstallations = await this.installationRepository.count({
+      where: { status: InstallationStatus.IN_PROGRESS },
+    });
+    const completedInstallations = await this.installationRepository.count({
+      where: { status: InstallationStatus.COMPLETED },
+    });
+    const rejectedInstallations = await this.installationRepository.count({
+      where: { status: InstallationStatus.REJECTED },
+    });
+
+    // Count energy requests by status
+    const pendingEnergy = await this.energyRequestRepository.count({
+      where: { status: EnergyRequestStatus.PENDING },
+    });
+    const approvedEnergy = await this.energyRequestRepository.count({
+      where: { status: EnergyRequestStatus.APPROVED },
+    });
+    const rejectedEnergy = await this.energyRequestRepository.count({
+      where: { status: EnergyRequestStatus.REJECTED },
+    });
+    const rewardGeneratedEnergy = await this.energyRequestRepository.count({
+      where: { status: EnergyRequestStatus.REWARD_GENERATED },
+    });
+    const blockchainFailedEnergy = await this.energyRequestRepository.count({
+      where: { status: EnergyRequestStatus.BLOCKCHAIN_FAILED },
+    });
 
     return {
-      users: {
-        total: totalUsers,
-        verified: verifiedUsers,
-      },
       kyc: {
         pending: pendingKyc,
         inReview: inReviewKyc,
         approved: approvedKyc,
         rejected: rejectedKyc,
+      },
+      installations: {
+        submitted: submittedInstallations,
+        assigned: assignedInstallations,
+        inProgress: inProgressInstallations,
+        completed: completedInstallations,
+        rejected: rejectedInstallations,
+      },
+      energyRequests: {
+        pending: pendingEnergy,
+        approved: approvedEnergy,
+        rejected: rejectedEnergy,
+        rewardGenerated: rewardGeneratedEnergy,
+        blockchainFailed: blockchainFailedEnergy,
       },
     };
   }
