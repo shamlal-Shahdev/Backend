@@ -9,11 +9,9 @@ import { RejectKycDto } from './dto/reject-kyc.dto';
 import { RequestDocumentsDto } from './dto/request-documents.dto';
 import { WalletService } from '../../blockchain/wallet.service';
 import { WalletBalanceService } from '../../wallet-balance/wallet-balance.service';
-
 @Injectable()
 export class AdminKycService {
   private readonly logger = new Logger(AdminKycService.name);
-
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -23,15 +21,12 @@ export class AdminKycService {
     private readonly walletService: WalletService,
     private readonly walletBalanceService: WalletBalanceService,
   ) {}
-
   async getUsersWithKycStatus() {
     const users = await this.userRepository.find({
       where: { role: UserRole.USER },
       relations: ['kycDocuments'],
       order: { createdAt: 'DESC' },
     });
-
-    // Format response to include user info and their KYC documents
     const usersWithKyc = users.map((user) => ({
       id: user.id,
       name: user.name,
@@ -44,33 +39,26 @@ export class AdminKycService {
       kycDocuments: user.kycDocuments || [],
       kycDocumentsCount: (user.kycDocuments || []).length,
     }));
-
     this.logger.log(
       `Retrieved ${usersWithKyc.length} users with KYC information`,
     );
-
     return {
       users: usersWithKyc,
       total: usersWithKyc.length,
     };
   }
-
   async approveKyc(userId: number, adminId: number, dto: ApproveKycDto) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
     const kycDocuments = await this.kycRepository.find({
       where: { userId },
       order: { submittedAt: 'DESC' },
     });
-
     if (kycDocuments.length === 0) {
       throw new NotFoundException('KYC documents not found for this user');
     }
-
-    // Update KYC documents with admin notes and reviewed date
     for (const doc of kycDocuments) {
       doc.reviewedAt = new Date();
       if (dto.note) {
@@ -78,25 +66,16 @@ export class AdminKycService {
       }
       await this.kycRepository.save(doc);
     }
-
-    // Update user KYC status
     user.kycStatus = KycStatus.APPROVED;
-
-    // Create wallet if user doesn't have one yet
     if (!user.walletAddress || !user.encryptedPrivateKey) {
       const { address, encryptedPrivateKey } = this.walletService.createWallet();
       user.walletAddress = address;
       user.encryptedPrivateKey = encryptedPrivateKey;
       this.logger.log(`Created blockchain wallet for user ${userId}: ${address}`);
-
-      // Create wallet balance record
       await this.walletBalanceService.getOrCreateWalletBalance(userId);
       this.logger.log(`Created wallet balance record for user ${userId}`);
     }
-
     await this.userRepository.save(user);
-
-    // Send approval email
     try {
       await this.emailService.sendKycApprovalEmail(
         user.email,
@@ -109,45 +88,33 @@ export class AdminKycService {
         `Failed to send KYC approval email to ${user.email}:`,
         error,
       );
-      // Don't throw error - KYC approval should succeed even if email fails
     }
-
     this.logger.log(`KYC approved for user ${userId} by admin ${adminId}`);
-
     return {
       message: 'KYC approved successfully',
       userId,
       status: 'approved',
     };
   }
-
   async rejectKyc(userId: number, adminId: number, dto: RejectKycDto) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
     const kycDocuments = await this.kycRepository.find({
       where: { userId },
       order: { submittedAt: 'DESC' },
     });
-
     if (kycDocuments.length === 0) {
       throw new NotFoundException('KYC documents not found for this user');
     }
-
-    // Update KYC documents with rejection reason and reviewed date
     for (const doc of kycDocuments) {
       doc.reviewedAt = new Date();
       doc.adminNotes = dto.reason;
       await this.kycRepository.save(doc);
     }
-
-    // Update user KYC status
     user.kycStatus = KycStatus.REJECTED;
     await this.userRepository.save(user);
-
-    // Send rejection email
     try {
       await this.emailService.sendKycRejectionEmail(
         user.email,
@@ -160,11 +127,8 @@ export class AdminKycService {
         `Failed to send KYC rejection email to ${user.email}:`,
         error,
       );
-      // Don't throw error - KYC rejection should succeed even if email fails
     }
-
     this.logger.log(`KYC rejected for user ${userId} by admin ${adminId}`);
-
     return {
       message: 'KYC rejected successfully',
       userId,
@@ -172,7 +136,6 @@ export class AdminKycService {
       reason: dto.reason,
     };
   }
-
   async requestDocuments(
     userId: number,
     adminId: number,
@@ -182,21 +145,15 @@ export class AdminKycService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    // TODO: Send document request email when email template is available
-    // await this.emailService.sendKycDocumentRequestEmail(user.email, user.name, dto.documentTypes, dto.message);
-
     this.logger.log(
       `Document request sent to user ${userId} by admin ${adminId}`,
     );
-
     return {
       message: 'Document request sent successfully',
       userId,
       requestedDocuments: dto.documentTypes,
     };
   }
-
   async getUserKycDocuments(
     userId: number,
   ): Promise<{ documents: KycEntity[]; userId: number; total: number }> {
@@ -204,19 +161,16 @@ export class AdminKycService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
     const kycDocuments = await this.kycRepository.find({
       where: { userId, user: { role: UserRole.USER } },
       order: { submittedAt: 'DESC' },
       relations: ['user'],
     });
-
     this.logger.log(
       `Retrieved ${kycDocuments.length} KYC documents for user ${userId}`,
     );
     console.log(kycDocuments);
     console.log(user);
-
     return {
       documents: kycDocuments,
       userId,

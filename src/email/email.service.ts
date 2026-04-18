@@ -2,21 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { MailerService } from './mailer.service';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
-
 @Injectable()
 export class EmailService {
   constructor(
     private readonly mailer: MailerService,
     private readonly configService: ConfigService,
   ) {}
-
   async sendVerificationEmail(to: string, token: string) {
     const frontendUrl = this.configService.getOrThrow('app.frontendUrl', {
       infer: true,
     });
-    // Send frontend URL - frontend will handle API call to backend
     const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
-
     await this.mailer.sendMail({
       to,
       subject: 'Verify Your Email - WattsUp Energy',
@@ -24,13 +20,11 @@ export class EmailService {
       context: { verificationLink },
     });
   }
-
   async sendResetPasswordEmail(to: string, token: string, routePath: string = '/reset-password') {
     const frontendUrl = this.configService.getOrThrow('app.frontendUrl', {
       infer: true,
     });
     const resetLink = `${frontendUrl}${routePath}?token=${token}`;
-
     await this.mailer.sendMail({
       to,
       subject: 'Reset Your Password - WattsUp Energy',
@@ -38,7 +32,6 @@ export class EmailService {
       context: { resetLink },
     });
   }
-
   async sendKycApprovalEmail(to: string, name: string, note?: string) {
     await this.mailer.sendMail({
       to,
@@ -47,7 +40,6 @@ export class EmailService {
       context: { name, note },
     });
   }
-
   async sendKycRejectionEmail(to: string, name: string, reason: string) {
     await this.mailer.sendMail({
       to,
@@ -56,7 +48,6 @@ export class EmailService {
       context: { name, reason },
     });
   }
-
   async sendEnergyRequestSubmittedEmail(
     to: string,
     name: string,
@@ -84,7 +75,6 @@ export class EmailService {
       context: { name, month: monthNames[month - 1], year },
     });
   }
-
   async sendEnergyRequestApprovedEmail(
     to: string,
     name: string,
@@ -113,7 +103,6 @@ export class EmailService {
       context: { name, month: monthNames[month - 1], year, note },
     });
   }
-
   async sendEnergyRequestRejectedEmail(
     to: string,
     name: string,
@@ -142,7 +131,6 @@ export class EmailService {
       context: { name, month: monthNames[month - 1], year, reason },
     });
   }
-
   async sendEnergyRewardGeneratedEmail(
     to: string,
     name: string,

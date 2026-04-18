@@ -7,7 +7,6 @@ import { ForgotPasswordDto } from '../../auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from '../../auth/dto/reset-password.dto';
 import { LoginResponseDto } from '../../auth/dto/login-response.dto';
 import { Throttle } from '@nestjs/throttler';
-
 @ApiTags('Vendor - Auth')
 @Controller({
   path: 'vendor/auth',
@@ -15,9 +14,8 @@ import { Throttle } from '@nestjs/throttler';
 })
 export class VendorAuthController {
   constructor(private readonly vendorAuthService: VendorAuthService) {}
-
   @Post('register')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Vendor registration' })
   @ApiResponse({
@@ -35,9 +33,8 @@ export class VendorAuthController {
         'Vendor registration successful. Please check your email for verification.',
     };
   }
-
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute to prevent brute force
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Vendor login' })
   @ApiResponse({
@@ -53,9 +50,8 @@ export class VendorAuthController {
   async login(@Body() vendorLoginDto: VendorLoginDto): Promise<LoginResponseDto> {
     return this.vendorAuthService.login(vendorLoginDto);
   }
-
   @Post('forgot-password')
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute to prevent abuse
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Vendor forgot password' })
   @ApiResponse({
@@ -68,9 +64,8 @@ export class VendorAuthController {
     await this.vendorAuthService.forgotPassword(forgotPasswordDto.email);
     return { message: 'Password reset email sent. Please check your email.' };
   }
-
   @Post('reset-password')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Vendor reset password' })
   @ApiResponse({
@@ -87,5 +82,15 @@ export class VendorAuthController {
     );
     return { message: 'Password reset successfully' };
   }
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) 
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend vendor verification email' })
+  @ApiResponse({ status: 200, description: 'Verification email resent successfully' })
+  async resendVerificationEmail(
+    @Body() body: { email: string },
+  ): Promise<{ message: string }> {
+    await this.vendorAuthService.resendVerificationEmail(body.email);
+    return { message: 'Verification email sent. Please check your inbox.' };
+  }
 }
-

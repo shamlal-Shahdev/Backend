@@ -11,11 +11,9 @@ import { CreateWalletBalanceDto } from './dto/create-wallet-balance.dto';
 import { UpdateWalletBalanceDto } from './dto/update-wallet-balance.dto';
 import { TokenService } from '../blockchain/token.service';
 import { UserEntity } from '../user/entity/user.entity';
-
 @Injectable()
 export class WalletBalanceService {
   private readonly logger = new Logger(WalletBalanceService.name);
-
   constructor(
     @InjectRepository(WalletBalanceEntity)
     private readonly walletBalanceRepository: Repository<WalletBalanceEntity>,
@@ -23,26 +21,22 @@ export class WalletBalanceService {
     private readonly userRepository: Repository<UserEntity>,
     private readonly tokenService: TokenService,
   ) {}
-
   async create(
     createWalletBalanceDto: CreateWalletBalanceDto,
   ): Promise<WalletBalanceEntity> {
     const existingBalance = await this.walletBalanceRepository.findOne({
       where: { userId: createWalletBalanceDto.userId },
     });
-
     if (existingBalance) {
       throw new ConflictException(
         'Wallet balance for this user already exists',
       );
     }
-
     const walletBalance = this.walletBalanceRepository.create(
       createWalletBalanceDto,
     );
     return await this.walletBalanceRepository.save(walletBalance);
   }
-
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -55,35 +49,28 @@ export class WalletBalanceService {
     });
     return [data, total];
   }
-
   async findOne(id: number): Promise<WalletBalanceEntity> {
     const walletBalance = await this.walletBalanceRepository.findOne({
       where: { id },
       relations: ['user'],
     });
-
     if (!walletBalance) {
       throw new NotFoundException(`Wallet Balance with ID ${id} not found`);
     }
-
     return walletBalance;
   }
-
   async findByUserId(userId: number): Promise<WalletBalanceEntity> {
     const walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
       relations: ['user'],
     });
-
     if (!walletBalance) {
       throw new NotFoundException(
         `Wallet Balance for user ID ${userId} not found`,
       );
     }
-
     return walletBalance;
   }
-
   async update(
     id: number,
     updateWalletBalanceDto: UpdateWalletBalanceDto,
@@ -92,21 +79,14 @@ export class WalletBalanceService {
     Object.assign(walletBalance, updateWalletBalanceDto);
     return await this.walletBalanceRepository.save(walletBalance);
   }
-
   async remove(id: number): Promise<void> {
     const walletBalance = await this.findOne(id);
     await this.walletBalanceRepository.remove(walletBalance);
   }
-
-  /**
-   * Create or get wallet balance for a user
-   * Auto-creates if doesn't exist
-   */
   async getOrCreateWalletBalance(userId: number): Promise<WalletBalanceEntity> {
     let walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
     });
-
     if (!walletBalance) {
       walletBalance = this.walletBalanceRepository.create({
         userId,
@@ -115,36 +95,24 @@ export class WalletBalanceService {
       walletBalance = await this.walletBalanceRepository.save(walletBalance);
       this.logger.log(`Created wallet balance for user ${userId}`);
     }
-
     return walletBalance;
   }
-
-  /**
-   * Sync balance from blockchain to database
-   */
   async syncBalanceFromBlockchain(userId: number): Promise<WalletBalanceEntity> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-
     if (!user.walletAddress) {
       throw new NotFoundException(
         `User ${userId} does not have a wallet address`,
       );
     }
-
-    // Get balance from blockchain
     const blockchainBalance = await this.tokenService.getUserBalance(
       user.walletAddress,
     );
-
-    // Get or create wallet balance record
     let walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
     });
-
     if (!walletBalance) {
       walletBalance = this.walletBalanceRepository.create({
         userId,
@@ -153,18 +121,12 @@ export class WalletBalanceService {
     } else {
       walletBalance.balance = parseFloat(blockchainBalance.formatted);
     }
-
     walletBalance = await this.walletBalanceRepository.save(walletBalance);
     this.logger.log(
       `Synced balance for user ${userId}: ${blockchainBalance.formatted} WATT`,
     );
-
     return walletBalance;
   }
-
-  /**
-   * Update balance after token mint/reward
-   */
   async updateBalanceAfterReward(
     userId: number,
     rewardAmount: number,

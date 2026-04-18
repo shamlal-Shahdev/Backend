@@ -1,15 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { now, HydratedDocument } from 'mongoose';
-// import { UserSchemaClass } from '../../../../../users/infrastructure/persistence/document/entities/user.schema'; // Old users module not found
 import { EntityDocumentHelper } from '../../../../../utils/document-entity-helper';
-
 export type SessionSchemaDocument = HydratedDocument<SessionSchemaClass>;
-
-// Temporary UserSchemaClass until MongoDB user schema is restored
 class UserSchemaClass {
   _id: mongoose.Types.ObjectId;
 }
-
 @Schema({
   timestamps: true,
   toJSON: {
@@ -20,20 +15,14 @@ class UserSchemaClass {
 export class SessionSchemaClass extends EntityDocumentHelper {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'UserSchemaClass' })
   user: UserSchemaClass;
-
   @Prop()
   hash: string;
-
   @Prop({ default: now })
   createdAt: Date;
-
   @Prop({ default: now })
   updatedAt: Date;
-
   @Prop()
   deletedAt: Date;
 }
-
 export const SessionSchema = SchemaFactory.createForClass(SessionSchemaClass);
-
 SessionSchema.index({ user: 1 });

@@ -16,7 +16,6 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { AdminUsersService } from './users.service';
 import { FilterUsersDto } from './dto/filter-users.dto';
-
 @ApiTags('Admin - Users')
 @Controller({
   path: 'admin/users',
@@ -26,14 +25,12 @@ import { FilterUsersDto } from './dto/filter-users.dto';
 @ApiBearerAuth()
 export class AdminUsersController {
   constructor(private readonly adminUsersService: AdminUsersService) {}
-
   @Get()
   @ApiOperation({ summary: 'Get all users with filters' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   async getUsers(@Query() dto: FilterUsersDto) {
     return this.adminUsersService.getUsers(dto);
   }
-
   @Get(':userId')
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiOperation({ summary: 'Get user details' })

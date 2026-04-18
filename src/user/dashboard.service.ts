@@ -8,7 +8,6 @@ import { RewardTransactionEntity } from '../reward-transaction/entity/reward-tra
 import { PredictionEntity, PredictionStatus } from '../prediction/entity/prediction.entity';
 import { InstallationEntity } from '../installation/entity/installation.entity';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
-
 @Injectable()
 export class DashboardService {
   constructor(
@@ -25,16 +24,12 @@ export class DashboardService {
     @InjectRepository(InstallationEntity)
     private readonly installationRepository: Repository<InstallationEntity>,
   ) {}
-
   async getUserDashboard(userId: number): Promise<DashboardResponseDto> {
-    // Get user's installations
     const installations = await this.installationRepository.find({
       where: { userId },
       select: ['id'],
     });
     const installationIds = installations.map((inst) => inst.id);
-
-    // Calculate total energy generated (sum of verified_kwh from energy_readings)
     const totalEnergyResult = await this.energyReadingRepository
       .createQueryBuilder('er')
       .select('COALESCE(SUM(er.verified_kwh), 0)', 'total')
@@ -42,40 +37,25 @@ export class DashboardService {
       .andWhere('er.verified = :verified', { verified: true })
       .getRawOne();
     const totalEnergyGenerated = parseFloat(totalEnergyResult?.total || '0');
-
-    // Get wallet balance
     const walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
     });
     const tokensAvailable = walletBalance ? parseFloat(walletBalance.balance.toString()) : 0;
-
-    // Calculate total tokens earned (sum of tokens_amount from reward_transactions)
     const totalTokensResult = await this.rewardTransactionRepository
       .createQueryBuilder('rt')
       .select('COALESCE(SUM(rt.tokens_amount), 0)', 'total')
       .where('rt.user_id = :userId', { userId })
       .getRawOne();
     const totalTokensEarned = parseFloat(totalTokensResult?.total || '0');
-
-    // Calculate tokens redeemed (for now, we'll use 0 as redemption tracking might be separate)
-    // This could be calculated from redemption table if it exists
     const tokensRedeemed = 0;
-
-    // Count certificates earned
     const certificatesEarned = await this.certificateRepository.count({
       where: { userId },
     });
-
-    // Count active predictions (status = LOCKED)
     const activePredictions = await this.predictionRepository.count({
       where: { userId, status: PredictionStatus.LOCKED },
     });
-
-    // Get Energy Generation Trend (last 6 months)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
-    // Get energy readings grouped by month using query builder
     const energyReadings = await this.energyReadingRepository
       .createQueryBuilder('er')
       .select('er.timestamp', 'timestamp')
@@ -84,8 +64,6 @@ export class DashboardService {
       .andWhere('er.verified = :verified', { verified: true })
       .andWhere('er.timestamp >= :sixMonthsAgo', { sixMonthsAgo })
       .getMany();
-
-    // Group by month in JavaScript (database-agnostic)
     const monthlyData = new Map<string, number>();
     energyReadings.forEach((er) => {
       const date = new Date(er.timestamp);
@@ -94,7 +72,6 @@ export class DashboardService {
       const energy = er.verifiedKwh ? parseFloat(er.verifiedKwh.toString()) : 0;
       monthlyData.set(monthStr, current + energy);
     });
-
     const energyTrend: { month: string; energy: number }[] = [];
     const currentDate = new Date();
     for (let i = 5; i >= 0; i--) {
@@ -106,8 +83,6 @@ export class DashboardService {
         energy: monthlyData.get(monthStr) || 0,
       });
     }
-
-    // Get Rewards Distribution by category
     const rewardsByCategory = await this.rewardTransactionRepository
       .createQueryBuilder('rt')
       .select('rt.reason', 'category')
@@ -115,39 +90,32 @@ export class DashboardService {
       .where('rt.user_id = :userId', { userId })
       .groupBy('rt.reason')
       .getRawMany();
-
     const rewardsDistribution = rewardsByCategory.map((item) => {
       const amount = parseFloat(item.amount);
       const percentage = totalTokensEarned > 0 ? (amount / totalTokensEarned) * 100 : 0;
       return {
         category: item.category,
         amount,
-        percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal
+        percentage: Math.round(percentage * 10) / 10, 
       };
     });
-
-    // Get recent activity from reward transactions, certificates, and predictions
     const recentRewards = await this.rewardTransactionRepository.find({
       where: { userId },
       order: { issuedAt: 'DESC' },
       take: 10,
       relations: ['installation'],
     });
-
     const recentCertificates = await this.certificateRepository.find({
       where: { userId },
       order: { generatedAt: 'DESC' },
       take: 5,
     });
-
     const allActivities: Array<{
       type: string;
       description: string;
       date: Date;
       amount?: number;
     }> = [];
-
-    // Add reward activities
     recentRewards.forEach((reward) => {
       allActivities.push({
         type: 'tokens',
@@ -156,8 +124,6 @@ export class DashboardService {
         amount: parseFloat(reward.tokensAmount.toString()),
       });
     });
-
-    // Add certificate activities
     recentCertificates.forEach((cert) => {
       allActivities.push({
         type: 'certificate',
@@ -165,12 +131,9 @@ export class DashboardService {
         date: cert.generatedAt,
       });
     });
-
-    // Sort by date and take the most recent 10
     const recentActivity = allActivities
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
-
     return {
       totalEnergyGenerated,
       totalTokensEarned,

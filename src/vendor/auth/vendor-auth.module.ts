@@ -4,7 +4,6 @@ import { VendorAuthController } from './vendor-auth.controller';
 import { VendorAuthService } from './vendor-auth.service';
 import { UserModule } from '../../user/user.module';
 import { EmailModule } from '../../email/email.module';
-
 @Module({
   imports: [UserModule, EmailModule, JwtModule.register({})],
   controllers: [VendorAuthController],
@@ -12,4 +11,3 @@ import { EmailModule } from '../../email/email.module';
   exports: [VendorAuthService],
 })
 export class VendorAuthModule {}
-

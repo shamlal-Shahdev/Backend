@@ -9,22 +9,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
 import { S3Client } from '@aws-sdk/client-s3';
 import multerS3 from 'multer-s3';
-
 import { FilesS3Service } from './files.service';
-
 import { DocumentFilePersistenceModule } from '../../persistence/document/document-persistence.module';
 import { RelationalFilePersistenceModule } from '../../persistence/relational/relational-persistence.module';
 import { AllConfigType } from '../../../../config/config.type';
 import { DatabaseConfig } from '../../../../database/config/database-config.type';
 import databaseConfig from '../../../../database/config/database.config';
-
-// <database-block>
 const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
   .isDocumentDatabase
   ? DocumentFilePersistenceModule
   : RelationalFilePersistenceModule;
-// </database-block>
-
 @Module({
   imports: [
     infrastructurePersistenceModule,
@@ -43,20 +37,15 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
             }),
           },
         });
-
         return {
           fileFilter: (request, file, callback) => {
-            // Allowed file extensions
             const allowedExtensions = /\.(jpg|jpeg|png|gif)$/i;
-            // Allowed MIME types for security (prevents file type spoofing)
             const allowedMimeTypes = [
               'image/jpeg',
               'image/jpg',
               'image/png',
               'image/gif',
             ];
-
-            // Validate file extension
             if (!file.originalname.match(allowedExtensions)) {
               return callback(
                 new UnprocessableEntityException({
@@ -68,8 +57,6 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
                 false,
               );
             }
-
-            // Validate MIME type to prevent file type spoofing
             if (!allowedMimeTypes.includes(file.mimetype)) {
               return callback(
                 new UnprocessableEntityException({
@@ -81,7 +68,6 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
                 false,
               );
             }
-
             callback(null, true);
           },
           storage: multerS3({

@@ -5,7 +5,6 @@ import { VendorInstallationModule } from './installation/vendor-installation.mod
 import { VendorDashboardModule } from './dashboard/dashboard.module';
 import { VendorController } from './vendor.controller';
 import { UserEntity } from '../user/entity/user.entity';
-
 @Module({
   imports: [
     VendorAuthModule,

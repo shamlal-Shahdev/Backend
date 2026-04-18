@@ -29,7 +29,6 @@ import { PredictionService } from './prediction.service';
 import { CreatePredictionDto } from './dto/create-prediction.dto';
 import { UpdatePredictionDto } from './dto/update-prediction.dto';
 import { PredictionEntity } from './entity/prediction.entity';
-
 @ApiTags('Predictions')
 @Controller({
   path: 'predictions',
@@ -39,7 +38,6 @@ import { PredictionEntity } from './entity/prediction.entity';
 @ApiBearerAuth()
 export class PredictionController {
   constructor(private readonly predictionService: PredictionService) {}
-
   @Post()
   @ApiOperation({ summary: 'Submit a new prediction' })
   @ApiResponse({
@@ -54,7 +52,6 @@ export class PredictionController {
   ): Promise<PredictionEntity> {
     return this.predictionService.create(createPredictionDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all predictions with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -71,7 +68,6 @@ export class PredictionController {
   ) {
     return this.predictionService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a prediction by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -85,7 +81,6 @@ export class PredictionController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<PredictionEntity> {
     return this.predictionService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a prediction' })
   @ApiParam({ name: 'id', type: Number })
@@ -102,7 +97,6 @@ export class PredictionController {
   ): Promise<PredictionEntity> {
     return this.predictionService.update(id, updatePredictionDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a prediction' })
   @ApiParam({ name: 'id', type: Number })

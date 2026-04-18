@@ -1,16 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-
 export class AddKycSystem1738500000000 implements MigrationInterface {
   name = 'AddKycSystem1738500000000';
-
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Add role column to user table
     await queryRunner.query(`
       ALTER TABLE user 
       ADD COLUMN role VARCHAR(50) DEFAULT 'user'
     `);
-
-    // Create KYC table
     await queryRunner.query(`
       CREATE TABLE kyc (
         id VARCHAR(36) PRIMARY KEY,
@@ -37,8 +32,6 @@ export class AddKycSystem1738500000000 implements MigrationInterface {
         FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-
-    // Create documents table
     await queryRunner.query(`
       CREATE TABLE documents (
         id VARCHAR(36) PRIMARY KEY,
@@ -58,8 +51,6 @@ export class AddKycSystem1738500000000 implements MigrationInterface {
         FOREIGN KEY (kyc_id) REFERENCES kyc(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-
-    // Create audit_logs table
     await queryRunner.query(`
       CREATE TABLE audit_logs (
         id VARCHAR(36) PRIMARY KEY,
@@ -78,7 +69,6 @@ export class AddKycSystem1738500000000 implements MigrationInterface {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
   }
-
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query('DROP TABLE IF EXISTS audit_logs');
     await queryRunner.query('DROP TABLE IF EXISTS documents');

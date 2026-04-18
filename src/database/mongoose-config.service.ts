@@ -6,11 +6,9 @@ import {
 } from '@nestjs/mongoose';
 import { AllConfigType } from '../config/config.type';
 import mongooseAutoPopulate from 'mongoose-autopopulate';
-
 @Injectable()
 export class MongooseConfigService implements MongooseOptionsFactory {
   constructor(private configService: ConfigService<AllConfigType>) {}
-
   createMongooseOptions(): MongooseModuleOptions {
     return {
       uri: this.configService.get('database.url', { infer: true }),

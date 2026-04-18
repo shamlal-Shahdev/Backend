@@ -4,7 +4,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { FilesS3PresignedService } from './files.service';
 import { FileUploadDto } from './dto/file.dto';
 import { FileResponseDto } from './dto/file-response.dto';
-
 @ApiTags('Files')
 @Controller({
   path: 'files',
@@ -12,7 +11,6 @@ import { FileResponseDto } from './dto/file-response.dto';
 })
 export class FilesS3PresignedController {
   constructor(private readonly filesService: FilesS3PresignedService) {}
-
   @ApiCreatedResponse({
     type: FileResponseDto,
   })

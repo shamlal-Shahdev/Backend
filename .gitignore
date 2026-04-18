@@ -36,6 +36,10 @@ lerna-debug.log*
 
 .data
 /files
+
+# Tesseract / OCR language packs (fetched by tesseract.js at runtime)
+*.traineddata
+
 .env
 /ormconfig.json
 .codegpt

@@ -4,45 +4,33 @@ import { Repository } from 'typeorm';
 import { UserEntity } from '../../user/entity/user.entity';
 import { KycEntity } from '../../kyc/entity/kyc.entity';
 import { FilterUsersDto } from './dto/filter-users.dto';
-
 @Injectable()
 export class AdminUsersService {
   private readonly logger = new Logger(AdminUsersService.name);
-
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(KycEntity)
     private readonly kycRepository: Repository<KycEntity>,
   ) {}
-
   async getUsers(dto: FilterUsersDto) {
     const { email, kycStatus, page = 1, limit = 10 } = dto;
-
     const queryBuilder = this.userRepository.createQueryBuilder('user');
-
     if (email) {
       queryBuilder.andWhere('user.email LIKE :email', { email: `%${email}%` });
     }
-
-    // Filter by user's kycStatus
     if (kycStatus) {
       queryBuilder.andWhere('user.kycStatus = :kycStatus', { kycStatus });
     }
-
-    // Join KYC documents for display
     queryBuilder.leftJoinAndSelect('user.kycDocuments', 'kyc');
-
     const skip = (page - 1) * limit;
     const [users, total] = await queryBuilder
       .skip(skip)
       .take(limit)
       .getManyAndCount();
-
     const usersWithKyc = users.map((user) => {
       const kycDocs = user.kycDocuments || [];
       const latestKyc = kycDocs.length > 0 ? kycDocs[0] : null;
-
       return {
         id: user.id,
         name: user.name,
@@ -54,7 +42,6 @@ export class AdminUsersService {
         latestKycSubmittedAt: latestKyc?.submittedAt || null,
       };
     });
-
     return {
       users: usersWithKyc,
       pagination: {
@@ -65,19 +52,15 @@ export class AdminUsersService {
       },
     };
   }
-
   async getUserDetails(userId: number) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['kycDocuments'],
     });
-
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
     const kycDocuments = user.kycDocuments || [];
-
     return {
       id: user.id,
       name: user.name,

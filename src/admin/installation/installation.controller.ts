@@ -26,7 +26,6 @@ import { AdminInstallationService } from './installation.service';
 import { UpdateInstallationDto } from '../../installation/dto/update-installation.dto';
 import { AssignVendorDto } from './dto/assign-vendor.dto';
 import { InstallationEntity } from '../../installation/entity/installation.entity';
-
 @ApiTags('Admin - Installations')
 @Controller({
   path: 'admin/installations',
@@ -38,7 +37,6 @@ export class AdminInstallationController {
   constructor(
     private readonly adminInstallationService: AdminInstallationService,
   ) {}
-
   @Get()
   @ApiOperation({ summary: 'Get all installation requests with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -53,7 +51,6 @@ export class AdminInstallationController {
   ) {
     return this.adminInstallationService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a single installation request by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Installation ID' })
@@ -68,7 +65,6 @@ export class AdminInstallationController {
   ): Promise<InstallationEntity> {
     return this.adminInstallationService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({
     summary: 'Update installation request (approve/reject/update status)',
@@ -86,7 +82,6 @@ export class AdminInstallationController {
   ): Promise<InstallationEntity> {
     return this.adminInstallationService.update(id, updateInstallationDto);
   }
-
   @Patch(':id/assign')
   @ApiOperation({ 
     summary: 'Assign vendor to installation (Optional: Admin can reassign vendors)',
@@ -106,7 +101,6 @@ export class AdminInstallationController {
   ): Promise<InstallationEntity> {
     return this.adminInstallationService.assignVendor(id, assignVendorDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an installation request' })
   @ApiParam({ name: 'id', type: Number, description: 'Installation ID' })

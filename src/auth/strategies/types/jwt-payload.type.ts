@@ -1,5 +1,5 @@
 export type JwtPayloadType = {
-  id: number | string; // Support both for backward compatibility
+  id: number | string; 
   email: string;
   iat?: number;
   exp?: number;

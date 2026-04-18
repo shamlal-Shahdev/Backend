@@ -31,7 +31,6 @@ import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { KycStatusResponseDto } from './dto/kyc-status-response.dto';
 import { KycEntity } from './entity/kyc.entity';
-
 @ApiTags('KYC Documents')
 @Controller({
   path: 'kyc',
@@ -41,7 +40,6 @@ import { KycEntity } from './entity/kyc.entity';
 @ApiBearerAuth()
 export class KycController {
   constructor(private readonly kycService: KycService) {}
-
   @Post('submit')
   @ApiOperation({ summary: 'Submit a KYC document' })
   @ApiResponse({
@@ -55,7 +53,6 @@ export class KycController {
     console.log('Create KYC DTO', createKycDto);
     return this.kycService.create(createKycDto);
   }
-
   @Get('status')
   @ApiOperation({ summary: 'Get current user KYC status' })
   @ApiResponse({
@@ -69,7 +66,6 @@ export class KycController {
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     return this.kycService.getUserKycStatus(userId);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all KYC documents with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -86,7 +82,6 @@ export class KycController {
   ) {
     return this.kycService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a KYC document by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -100,7 +95,6 @@ export class KycController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<KycEntity> {
     return this.kycService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a KYC document (approve/reject)' })
   @ApiParam({ name: 'id', type: Number })
@@ -117,7 +111,6 @@ export class KycController {
   ): Promise<KycEntity> {
     return this.kycService.update(id, updateKycDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a KYC document' })
   @ApiParam({ name: 'id', type: Number })

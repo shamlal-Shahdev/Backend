@@ -1,6 +1,5 @@
 import { FileType } from '../../../../domain/file';
 import { FileEntity } from '../entities/file.entity';
-
 export class FileMapper {
   static toDomain(raw: FileEntity): FileType {
     const domainEntity = new FileType();
@@ -8,7 +7,6 @@ export class FileMapper {
     domainEntity.path = raw.path;
     return domainEntity;
   }
-
   static toPersistence(domainEntity: FileType): FileEntity {
     const persistenceEntity = new FileEntity();
     persistenceEntity.id = domainEntity.id;

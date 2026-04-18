@@ -29,7 +29,6 @@ import { TokenMintEventService } from './token-mint-event.service';
 import { CreateTokenMintEventDto } from './dto/create-token-mint-event.dto';
 import { UpdateTokenMintEventDto } from './dto/update-token-mint-event.dto';
 import { TokenMintEventEntity } from './entity/token-mint-event.entity';
-
 @ApiTags('Token Mint Events')
 @Controller({
   path: 'token-mint-events',
@@ -39,7 +38,6 @@ import { TokenMintEventEntity } from './entity/token-mint-event.entity';
 @ApiBearerAuth()
 export class TokenMintEventController {
   constructor(private readonly tokenMintEventService: TokenMintEventService) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new token mint event' })
   @ApiResponse({
@@ -54,7 +52,6 @@ export class TokenMintEventController {
   ): Promise<TokenMintEventEntity> {
     return this.tokenMintEventService.create(createTokenMintEventDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all token mint events with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -71,7 +68,6 @@ export class TokenMintEventController {
   ) {
     return this.tokenMintEventService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a token mint event by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -87,7 +83,6 @@ export class TokenMintEventController {
   ): Promise<TokenMintEventEntity> {
     return this.tokenMintEventService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a token mint event' })
   @ApiParam({ name: 'id', type: Number })
@@ -104,7 +99,6 @@ export class TokenMintEventController {
   ): Promise<TokenMintEventEntity> {
     return this.tokenMintEventService.update(id, updateTokenMintEventDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a token mint event' })
   @ApiParam({ name: 'id', type: Number })

@@ -1,13 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { KycStatus } from '../../user/entity/user.entity';
-
 export class KycStatusResponseDto {
   @ApiProperty({ enum: KycStatus, example: KycStatus.PENDING })
   status: KycStatus;
-
   @ApiProperty({ example: 1 })
   userId: number;
-
   @ApiProperty({
     required: false,
     nullable: true,
@@ -17,7 +14,6 @@ export class KycStatusResponseDto {
       'Rejection reason or admin feedback (only present if KYC was rejected)',
   })
   rejectionReason?: string | null;
-
   @ApiProperty({
     required: false,
     type: [Object],

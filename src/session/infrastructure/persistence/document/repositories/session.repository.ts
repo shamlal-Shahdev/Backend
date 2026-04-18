@@ -6,29 +6,23 @@ import { SessionSchemaClass } from '../entities/session.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { SessionMapper } from '../mappers/session.mapper';
-// import { User } from '../../../../../users/domain/user'; // Old users module not found
-// Temporary User type
 type User = { id: string | number };
-
 @Injectable()
 export class SessionDocumentRepository implements SessionRepository {
   constructor(
     @InjectModel(SessionSchemaClass.name)
     private sessionModel: Model<SessionSchemaClass>,
   ) {}
-
   async findById(id: Session['id']): Promise<NullableType<Session>> {
     const sessionObject = await this.sessionModel.findById(id);
     return sessionObject ? SessionMapper.toDomain(sessionObject) : null;
   }
-
   async create(data: Session): Promise<Session> {
     const persistenceModel = SessionMapper.toPersistence(data);
     const createdSession = new this.sessionModel(persistenceModel);
     const sessionObject = await createdSession.save();
     return SessionMapper.toDomain(sessionObject);
   }
-
   async update(
     id: Session['id'],
     payload: Partial<Session>,
@@ -38,14 +32,11 @@ export class SessionDocumentRepository implements SessionRepository {
     delete clonedPayload.createdAt;
     delete clonedPayload.updatedAt;
     delete clonedPayload.deletedAt;
-
     const filter = { _id: id.toString() };
     const session = await this.sessionModel.findOne(filter);
-
     if (!session) {
       return null;
     }
-
     const sessionObject = await this.sessionModel.findOneAndUpdate(
       filter,
       SessionMapper.toPersistence({
@@ -54,18 +45,14 @@ export class SessionDocumentRepository implements SessionRepository {
       }),
       { new: true },
     );
-
     return sessionObject ? SessionMapper.toDomain(sessionObject) : null;
   }
-
   async deleteById(id: Session['id']): Promise<void> {
     await this.sessionModel.deleteOne({ _id: id.toString() });
   }
-
   async deleteByUserId({ userId }: { userId: User['id'] }): Promise<void> {
     await this.sessionModel.deleteMany({ user: userId.toString() });
   }
-
   async deleteByUserIdWithExclude({
     userId,
     excludeSessionId,

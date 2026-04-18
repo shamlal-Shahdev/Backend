@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { FileSchema, FileSchemaClass } from './entities/file.schema';
 import { FileRepository } from '../file.repository';
 import { FileDocumentRepository } from './repositories/file.repository';
-
 @Module({
   imports: [
     MongooseModule.forFeature([

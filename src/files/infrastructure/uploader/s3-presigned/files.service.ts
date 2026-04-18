@@ -5,7 +5,6 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { FileRepository } from '../../persistence/file.repository';
-
 import { FileUploadDto } from './dto/file.dto';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -13,11 +12,9 @@ import { randomStringGenerator } from '@nestjs/common/utils/random-string-genera
 import { ConfigService } from '@nestjs/config';
 import { FileType } from '../../../domain/file';
 import { AllConfigType } from '../../../../config/config.type';
-
 @Injectable()
 export class FilesS3PresignedService {
   private s3: S3Client;
-
   constructor(
     private readonly fileRepository: FileRepository,
     private readonly configService: ConfigService<AllConfigType>,
@@ -34,7 +31,6 @@ export class FilesS3PresignedService {
       },
     });
   }
-
   async create(
     file: FileUploadDto,
   ): Promise<{ file: FileType; uploadSignedUrl: string }> {
@@ -46,18 +42,13 @@ export class FilesS3PresignedService {
         },
       });
     }
-
-    // Allowed file extensions
     const allowedExtensions = /\.(jpg|jpeg|png|gif)$/i;
-    // Allowed MIME types for security (prevents file type spoofing)
     const allowedMimeTypes = [
       'image/jpeg',
       'image/jpg',
       'image/png',
       'image/gif',
     ];
-
-    // Validate file extension
     if (!file.fileName.match(allowedExtensions)) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -66,8 +57,6 @@ export class FilesS3PresignedService {
         },
       });
     }
-
-    // Validate MIME type if provided
     if (file.mimeType && !allowedMimeTypes.includes(file.mimeType)) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -76,7 +65,6 @@ export class FilesS3PresignedService {
         },
       });
     }
-
     if (
       file.fileSize >
       (this.configService.get('file.maxFileSize', {
@@ -89,12 +77,10 @@ export class FilesS3PresignedService {
         message: 'File too large',
       });
     }
-
     const key = `${randomStringGenerator()}.${file.fileName
       .split('.')
       .pop()
       ?.toLowerCase()}`;
-
     const command = new PutObjectCommand({
       Bucket: this.configService.getOrThrow('file.awsDefaultS3Bucket', {
         infer: true,
@@ -106,7 +92,6 @@ export class FilesS3PresignedService {
     const data = await this.fileRepository.create({
       path: key,
     });
-
     return {
       file: data,
       uploadSignedUrl: signedUrl,

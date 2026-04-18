@@ -9,61 +9,49 @@ import {
   MaxLength,
 } from 'class-validator';
 import { UserRole } from '../entity/user.entity';
-
 export class CreateUserDto {
   @ApiProperty({ example: '0x1234567890abcdef1234567890abcdef12345678' })
   @IsString()
   @MinLength(42)
   @MaxLength(42)
   walletAddress: string;
-
   @ApiProperty({ example: 'John Doe' })
   @IsString()
   @MinLength(1)
   @MaxLength(255)
   name: string;
-
   @ApiProperty({ example: 'john.doe@example.com' })
   @IsEmail()
   email: string;
-
   @ApiProperty({ example: '+1234567890', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(20)
   phone?: string;
-
   @ApiProperty({ example: 'Solar Energy Solutions', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   companyName?: string;
-
   @ApiProperty({ example: 'hashed_password_string' })
   @IsString()
   passwordHash: string;
-
   @ApiProperty({ enum: UserRole, default: UserRole.USER, required: false })
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
-
   @ApiProperty({ default: false, required: false })
   @IsOptional()
   @IsBoolean()
   isVerified?: boolean;
-
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   verificationToken?: string | null;
-
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   resetToken?: string | null;
-
-  // Alias for passwordHash for backward compatibility
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

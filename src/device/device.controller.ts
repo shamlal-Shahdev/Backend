@@ -29,7 +29,6 @@ import { DeviceService } from './device.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { DeviceEntity } from './entity/device.entity';
-
 @ApiTags('Devices')
 @Controller({
   path: 'devices',
@@ -39,7 +38,6 @@ import { DeviceEntity } from './entity/device.entity';
 @ApiBearerAuth()
 export class DeviceController {
   constructor(private readonly deviceService: DeviceService) {}
-
   @Post()
   @ApiOperation({ summary: 'Register a new device' })
   @ApiResponse({
@@ -52,7 +50,6 @@ export class DeviceController {
   create(@Body() createDeviceDto: CreateDeviceDto): Promise<DeviceEntity> {
     return this.deviceService.create(createDeviceDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all devices with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -69,7 +66,6 @@ export class DeviceController {
   ) {
     return this.deviceService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a device by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -79,7 +75,6 @@ export class DeviceController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<DeviceEntity> {
     return this.deviceService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a device' })
   @ApiParam({ name: 'id', type: Number })
@@ -96,7 +91,6 @@ export class DeviceController {
   ): Promise<DeviceEntity> {
     return this.deviceService.update(id, updateDeviceDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a device' })
   @ApiParam({ name: 'id', type: Number })

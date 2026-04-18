@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-
 export class AdminDashboardResponseDto {
   @ApiProperty()
   kyc: {
@@ -8,7 +7,6 @@ export class AdminDashboardResponseDto {
     approved: number;
     rejected: number;
   };
-
   @ApiProperty()
   installations: {
     submitted: number;
@@ -17,7 +15,6 @@ export class AdminDashboardResponseDto {
     completed: number;
     rejected: number;
   };
-
   @ApiProperty()
   energyRequests: {
     pending: number;

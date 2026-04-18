@@ -11,7 +11,6 @@ import { CertificateEntity } from '../certificate/entity/certificate.entity';
 import { RewardTransactionEntity } from '../reward-transaction/entity/reward-transaction.entity';
 import { PredictionEntity } from '../prediction/entity/prediction.entity';
 import { InstallationEntity } from '../installation/entity/installation.entity';
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([

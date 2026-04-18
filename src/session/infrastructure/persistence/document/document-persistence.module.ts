@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { SessionSchema, SessionSchemaClass } from './entities/session.schema';
 import { SessionRepository } from '../session.repository';
 import { SessionDocumentRepository } from './repositories/session.repository';
-
 @Module({
   imports: [
     MongooseModule.forFeature([

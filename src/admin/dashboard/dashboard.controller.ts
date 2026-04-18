@@ -7,7 +7,6 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminDashboardService } from './dashboard.service';
-
 @ApiTags('Admin - Dashboard')
 @Controller({
   path: 'admin/dashboard',
@@ -17,7 +16,6 @@ import { AdminDashboardService } from './dashboard.service';
 @ApiBearerAuth()
 export class AdminDashboardController {
   constructor(private readonly adminDashboardService: AdminDashboardService) {}
-
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard statistics' })
   @ApiResponse({

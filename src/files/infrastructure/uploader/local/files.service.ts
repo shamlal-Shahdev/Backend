@@ -4,18 +4,15 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
 import { FileRepository } from '../../persistence/file.repository';
 import { AllConfigType } from '../../../../config/config.type';
 import { FileType } from '../../../domain/file';
-
 @Injectable()
 export class FilesLocalService {
   constructor(
     private readonly configService: ConfigService<AllConfigType>,
     private readonly fileRepository: FileRepository,
   ) {}
-
   async create(file: Express.Multer.File): Promise<{ file: FileType }> {
     if (!file) {
       throw new UnprocessableEntityException({
@@ -25,7 +22,6 @@ export class FilesLocalService {
         },
       });
     }
-
     return {
       file: await this.fileRepository.create({
         path: `/${this.configService.get('app.apiPrefix', {

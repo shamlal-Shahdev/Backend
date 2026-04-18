@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
-
 export class UpdateProfileDto {
   @ApiProperty({
     description: 'User full name',
@@ -13,7 +12,6 @@ export class UpdateProfileDto {
   @MinLength(2)
   @MaxLength(100)
   name?: string;
-
   @ApiProperty({
     description: 'Phone number',
     example: '+923001234567',

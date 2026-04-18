@@ -23,7 +23,6 @@ import { RejectKycDto } from './dto/reject-kyc.dto';
 import { RequestDocumentsDto } from './dto/request-documents.dto';
 import { KycEntity } from '../../kyc/entity/kyc.entity';
 import { UserEntity } from '../../user/entity/user.entity';
-
 @ApiTags('Admin - KYC')
 @Controller({
   path: 'admin/kyc',
@@ -33,7 +32,6 @@ import { UserEntity } from '../../user/entity/user.entity';
 @ApiBearerAuth()
 export class AdminKycController {
   constructor(private readonly adminKycService: AdminKycService) {}
-
   @Get('users')
   @ApiOperation({ summary: 'Get all users with KYC status' })
   @ApiResponse({
@@ -58,7 +56,6 @@ export class AdminKycController {
   ): Promise<{ documents: KycEntity[]; userId: number; total: number }> {
     return this.adminKycService.getUserKycDocuments(userId);
   }
-
   @Put(':userId/approve')
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiOperation({ summary: 'Approve KYC' })
@@ -71,7 +68,6 @@ export class AdminKycController {
   ) {
     return this.adminKycService.approveKyc(userId, req.user.id, dto);
   }
-
   @Put(':userId/reject')
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiOperation({ summary: 'Reject KYC' })
@@ -84,7 +80,6 @@ export class AdminKycController {
   ) {
     return this.adminKycService.rejectKyc(userId, req.user.id, dto);
   }
-
   @Post(':userId/request-documents')
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiOperation({ summary: 'Request additional documents' })

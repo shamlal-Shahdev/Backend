@@ -4,7 +4,6 @@ import { KycService } from './kyc.service';
 import { KycController } from './kyc.controller';
 import { KycEntity } from './entity/kyc.entity';
 import { UserEntity } from '../user/entity/user.entity';
-
 @Module({
   imports: [TypeOrmModule.forFeature([KycEntity, UserEntity])],
   controllers: [KycController],

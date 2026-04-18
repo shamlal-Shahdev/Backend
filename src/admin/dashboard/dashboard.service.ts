@@ -4,11 +4,9 @@ import { Repository } from 'typeorm';
 import { UserEntity, KycStatus, UserRole } from '../../user/entity/user.entity';
 import { InstallationEntity, InstallationStatus } from '../../installation/entity/installation.entity';
 import { EnergyRequestEntity, EnergyRequestStatus } from '../../energy-request/entity/energy-request.entity';
-
 @Injectable()
 export class AdminDashboardService {
   private readonly logger = new Logger(AdminDashboardService.name);
-
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -17,9 +15,7 @@ export class AdminDashboardService {
     @InjectRepository(EnergyRequestEntity)
     private readonly energyRequestRepository: Repository<EnergyRequestEntity>,
   ) {}
-
   async getDashboardStats() {
-    // Count users by their kycStatus
     const pendingKyc = await this.userRepository.count({
       where: { kycStatus: KycStatus.PENDING, role: UserRole.USER },
     });
@@ -32,8 +28,6 @@ export class AdminDashboardService {
     const inReviewKyc = await this.userRepository.count({
       where: { kycStatus: KycStatus.IN_REVIEW, role: UserRole.USER },
     });
-
-    // Count installations by status
     const submittedInstallations = await this.installationRepository.count({
       where: { status: InstallationStatus.SUBMITTED },
     });
@@ -49,8 +43,6 @@ export class AdminDashboardService {
     const rejectedInstallations = await this.installationRepository.count({
       where: { status: InstallationStatus.REJECTED },
     });
-
-    // Count energy requests by status
     const pendingEnergy = await this.energyRequestRepository.count({
       where: { status: EnergyRequestStatus.PENDING },
     });
@@ -66,7 +58,6 @@ export class AdminDashboardService {
     const blockchainFailedEnergy = await this.energyRequestRepository.count({
       where: { status: EnergyRequestStatus.BLOCKCHAIN_FAILED },
     });
-
     return {
       kyc: {
         pending: pendingKyc,

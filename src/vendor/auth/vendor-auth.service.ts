@@ -1,4 +1,4 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcryptjs';
@@ -18,25 +18,20 @@ import {
   UserNotFoundException,
 } from '../../auth/exceptions/auth.exceptions';
 import { CreateUserDto } from '../../user/dto/create-user.dto';
-
 @Injectable()
 export class VendorAuthService {
   private readonly logger = new Logger(VendorAuthService.name);
-
   constructor(
     private jwtService: JwtService,
     private usersService: UserService,
     private emailService: EmailService,
     private configService: ConfigService<AllConfigType>,
   ) {}
-
   async register(vendorRegisterDto: VendorRegisterDto): Promise<void> {
     try {
       this.logger.log(
         `🔐 Vendor registration attempt for email: ${vendorRegisterDto.email}`,
       );
-
-      // Check if user already exists
       const existingUser = await this.usersService.findByEmail(
         vendorRegisterDto.email,
       );
@@ -46,18 +41,12 @@ export class VendorAuthService {
         );
         throw new UserExistsException();
       }
-
-      // Hash password
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(
         vendorRegisterDto.password,
         salt,
       );
-
-      // Generate verification token
       const verificationToken = randomStringGenerator();
-
-      // Create vendor user
       const user = await this.usersService.create({
         name:
           vendorRegisterDto.firstName && vendorRegisterDto.lastName
@@ -74,10 +63,7 @@ export class VendorAuthService {
         companyName: vendorRegisterDto.companyName,
         role: UserRole.VENDOR,
       } as CreateUserDto);
-
       this.logger.log(`✅ Vendor created successfully: ${user.email}`);
-
-      // Send verification email
       await this.emailService.sendVerificationEmail(
         vendorRegisterDto.email,
         verificationToken,
@@ -88,7 +74,6 @@ export class VendorAuthService {
       throw error;
     }
   }
-
   async login(
     vendorLoginDto: VendorLoginDto,
   ): Promise<{ token: string; user: UserEntity }> {
@@ -96,21 +81,14 @@ export class VendorAuthService {
       this.logger.log(
         `🔐 Vendor login attempt for email: ${vendorLoginDto.email}`,
       );
-
-      // Normalize email to lowercase for consistent lookup
       const normalizedEmail = vendorLoginDto.email?.toLowerCase().trim();
-
       if (!normalizedEmail) {
         this.logger.error('❌ Vendor login attempt with empty email');
         throw new UserNotFoundException(
           'Email is required. Please provide a valid email address.',
         );
       }
-
-      // Find user by email
       const user = await this.usersService.findByEmail(normalizedEmail);
-
-      // Check if user exists
       if (!user || !user.id) {
         this.logger.warn(
           `❌ Vendor login attempt with non-existent email: ${normalizedEmail}`,
@@ -119,12 +97,9 @@ export class VendorAuthService {
           'This email is not registered. Please register first to create a vendor account.',
         );
       }
-
       this.logger.log(
         `📧 User found - ID: ${user.id}, Email: ${user.email}, Role: ${user.role}`,
       );
-
-      // Check if user is vendor
       if (user.role !== UserRole.VENDOR) {
         this.logger.warn(
           `🚫 Vendor login attempt by non-vendor user: ${vendorLoginDto.email} (Role: ${user.role})`,
@@ -133,21 +108,16 @@ export class VendorAuthService {
           'Access denied. Vendor role required.',
         );
       }
-
-      // Check if user is verified
       if (!user.isVerified) {
         this.logger.warn(
           `⚠️ Vendor login attempt with unverified email: ${vendorLoginDto.email}`,
         );
         throw new UnverifiedUserException();
       }
-
-      // Verify password
       if (!user.passwordHash) {
         this.logger.error(`🔒 Vendor user ${user.id} has no password set`);
         throw new InvalidCredentialsException();
       }
-
       const isPasswordValid = await bcrypt.compare(
         vendorLoginDto.password,
         user.passwordHash,
@@ -158,15 +128,11 @@ export class VendorAuthService {
         );
         throw new InvalidCredentialsException();
       }
-
-      // Generate JWT token
       const payload: JwtPayloadType = { id: user.id, email: user.email };
       const token = await this.generateToken(payload);
-
       this.logger.log(
         `✅ Vendor login successful for: ${vendorLoginDto.email}`,
       );
-
       return {
         token,
         user,
@@ -176,33 +142,26 @@ export class VendorAuthService {
       throw error;
     }
   }
-
   async forgotPassword(email: string): Promise<void> {
     try {
       this.logger.log(`🔐 Vendor forgot password request for email: ${email}`);
-
       const user = await this.usersService.findByEmail(email);
-      
       if (!user) {
         this.logger.warn(
           `Password reset requested for non-existent vendor email: ${email}`,
         );
         throw new UserNotFoundException();
       }
-
-      // Verify user is a vendor
       if (user.role !== UserRole.VENDOR) {
         this.logger.warn(
           `Password reset requested for non-vendor email: ${email}`,
         );
         throw new ForbiddenException('This email is not registered as a vendor');
       }
-
       const resetToken = randomStringGenerator();
       await this.usersService.update(user.id, {
         resetToken: resetToken as any,
       });
-      // Use vendor-specific reset password route
       await this.emailService.sendResetPasswordEmail(email, resetToken, '/vendor/reset-password');
       this.logger.log(`Password reset email sent to vendor: ${email}`);
     } catch (error) {
@@ -210,31 +169,25 @@ export class VendorAuthService {
       throw error;
     }
   }
-
   async resetPassword(token: string, newPassword: string): Promise<void> {
     try {
       this.logger.log(`🔐 Vendor password reset attempt with token`);
-
       const user = await this.usersService.findByResetToken(token);
       if (!user) {
         this.logger.warn(`Invalid reset token attempt: ${token}`);
         throw new InvalidTokenException('reset');
       }
-
-      // Verify user is a vendor
       if (user.role !== UserRole.VENDOR) {
         this.logger.warn(
           `Password reset attempt for non-vendor user with token: ${token}`,
         );
         throw new InvalidTokenException('reset');
       }
-
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-
       await this.usersService.update(user.id, {
         passwordHash: hashedPassword,
-        password: hashedPassword, // Alias
+        password: hashedPassword, 
         resetToken: null,
       } as any);
       this.logger.log(`Password reset successfully for vendor: ${user.email}`);
@@ -243,7 +196,53 @@ export class VendorAuthService {
       throw error;
     }
   }
-
+  async resendVerificationEmail(email: string): Promise<void> {
+    try {
+      const normalizedEmail = email?.toLowerCase().trim();
+      if (!normalizedEmail) {
+        this.logger.error('Resend verification attempt with empty email');
+        throw new UserNotFoundException('Email is required.');
+      }
+      this.logger.log(`🔐 Vendor resend verification request for email: ${normalizedEmail}`);
+      const user = await this.usersService.findByEmail(normalizedEmail);
+      if (!user) {
+        this.logger.warn(
+          `Resend verification attempt for non-existent vendor email: ${normalizedEmail}`,
+        );
+        throw new UserNotFoundException('Vendor not found with this email address.');
+      }
+      if (user.role !== UserRole.VENDOR) {
+        this.logger.warn(
+          `Resend verification attempt for non-vendor email: ${normalizedEmail}`,
+        );
+        throw new ForbiddenException('This email is not registered as a vendor');
+      }
+      if (user.isVerified) {
+        this.logger.warn(
+          `Resend verification attempt for already verified vendor: ${normalizedEmail}`,
+        );
+        throw new HttpException(
+          'This email is already verified. Please login to continue.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      let verificationToken = user.verificationToken;
+      if (!verificationToken) {
+        verificationToken = randomStringGenerator();
+        await this.usersService.update(user.id, {
+          verificationToken: verificationToken as any,
+        });
+      }
+      await this.emailService.sendVerificationEmail(
+        normalizedEmail,
+        verificationToken,
+      );
+      this.logger.log(`📧 Verification email resent to vendor: ${normalizedEmail}`);
+    } catch (error) {
+      this.logger.error('Error during vendor resend verification email:', error);
+      throw error;
+    }
+  }
   private async generateToken(payload: JwtPayloadType): Promise<string> {
     try {
       return await this.jwtService.signAsync(payload, {
@@ -258,4 +257,3 @@ export class VendorAuthService {
     }
   }
 }
-

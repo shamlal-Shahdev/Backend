@@ -1,10 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-
 export class CreateEnergyRequestsTable1740000000000 implements MigrationInterface {
   name = 'CreateEnergyRequestsTable1740000000000';
-
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create energy_requests table
     await queryRunner.query(`
       CREATE TABLE energy_requests (
         id INT PRIMARY KEY AUTO_INCREMENT,
@@ -28,9 +25,7 @@ export class CreateEnergyRequestsTable1740000000000 implements MigrationInterfac
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
   }
-
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query('DROP TABLE IF EXISTS energy_requests');
   }
 }
-

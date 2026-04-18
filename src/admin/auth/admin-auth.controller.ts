@@ -4,7 +4,6 @@ import { AdminAuthService } from './admin-auth.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { LoginResponseDto } from '../../auth/dto/login-response.dto';
 import { Throttle } from '@nestjs/throttler';
-
 @ApiTags('Admin - Auth')
 @Controller({
   path: 'admin/auth',
@@ -12,9 +11,8 @@ import { Throttle } from '@nestjs/throttler';
 })
 export class AdminAuthController {
   constructor(private readonly adminAuthService: AdminAuthService) {}
-
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute to prevent brute force
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin login' })
   @ApiResponse({
@@ -31,4 +29,3 @@ export class AdminAuthController {
     return this.adminAuthService.login(adminLoginDto);
   }
 }
-

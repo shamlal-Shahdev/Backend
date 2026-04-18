@@ -29,7 +29,6 @@ import { RewardTransactionService } from './reward-transaction.service';
 import { CreateRewardTransactionDto } from './dto/create-reward-transaction.dto';
 import { UpdateRewardTransactionDto } from './dto/update-reward-transaction.dto';
 import { RewardTransactionEntity } from './entity/reward-transaction.entity';
-
 @ApiTags('Reward Transactions')
 @Controller({
   path: 'reward-transactions',
@@ -41,7 +40,6 @@ export class RewardTransactionController {
   constructor(
     private readonly rewardTransactionService: RewardTransactionService,
   ) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new reward transaction' })
   @ApiResponse({
@@ -56,7 +54,6 @@ export class RewardTransactionController {
   ): Promise<RewardTransactionEntity> {
     return this.rewardTransactionService.create(createRewardTransactionDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all reward transactions with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -73,7 +70,6 @@ export class RewardTransactionController {
   ) {
     return this.rewardTransactionService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a reward transaction by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -89,7 +85,6 @@ export class RewardTransactionController {
   ): Promise<RewardTransactionEntity> {
     return this.rewardTransactionService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a reward transaction' })
   @ApiParam({ name: 'id', type: Number })
@@ -106,7 +101,6 @@ export class RewardTransactionController {
   ): Promise<RewardTransactionEntity> {
     return this.rewardTransactionService.update(id, updateRewardTransactionDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a reward transaction' })
   @ApiParam({ name: 'id', type: Number })

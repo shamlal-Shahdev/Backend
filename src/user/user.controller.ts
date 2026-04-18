@@ -32,7 +32,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from './entity/user.entity';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
-
 @ApiTags('Users')
 @Controller({
   path: 'users',
@@ -45,7 +44,6 @@ export class UserController {
     private readonly userService: UserService,
     private readonly dashboardService: DashboardService,
   ) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({
@@ -59,7 +57,6 @@ export class UserController {
   create(@Body() createUserDto: CreateUserDto): Promise<UserEntity> {
     return this.userService.create(createUserDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all users with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -76,7 +73,6 @@ export class UserController {
   ) {
     return this.userService.findAll(page, limit);
   }
-
   @Get('dashboard/user')
   @ApiOperation({ summary: 'Get user dashboard data' })
   @ApiResponse({
@@ -89,7 +85,6 @@ export class UserController {
     const user = req.user;
     return await this.dashboardService.getUserDashboard(user.id);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a user by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -99,7 +94,6 @@ export class UserController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<UserEntity> {
     return this.userService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user' })
   @ApiParam({ name: 'id', type: Number })
@@ -116,7 +110,6 @@ export class UserController {
   ): Promise<UserEntity> {
     return this.userService.update(id, updateUserDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a user' })
   @ApiParam({ name: 'id', type: Number })

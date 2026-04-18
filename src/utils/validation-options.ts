@@ -4,7 +4,6 @@ import {
   ValidationError,
   ValidationPipeOptions,
 } from '@nestjs/common';
-
 function generateErrors(errors: ValidationError[]) {
   return errors.reduce(
     (accumulator, currentValue) => ({
@@ -17,7 +16,6 @@ function generateErrors(errors: ValidationError[]) {
     {},
   );
 }
-
 const validationOptions: ValidationPipeOptions = {
   transform: true,
   whitelist: true,
@@ -29,5 +27,4 @@ const validationOptions: ValidationPipeOptions = {
     });
   },
 };
-
 export default validationOptions;

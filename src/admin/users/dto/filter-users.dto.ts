@@ -1,14 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-// Temporary enum until KYC module is restored
 export enum KycStatus {
   PENDING = 'pending',
   IN_REVIEW = 'in_review',
   APPROVED = 'approved',
   REJECTED = 'rejected',
 }
-
 export class FilterUsersDto {
   @ApiProperty({
     required: false,
@@ -18,7 +16,6 @@ export class FilterUsersDto {
   @IsOptional()
   @IsString()
   email?: string;
-
   @ApiProperty({
     required: false,
     example: '42101-1234567-1',
@@ -27,7 +24,6 @@ export class FilterUsersDto {
   @IsOptional()
   @IsString()
   cnicNumber?: string;
-
   @ApiProperty({
     required: false,
     enum: KycStatus,
@@ -36,7 +32,6 @@ export class FilterUsersDto {
   @IsOptional()
   @IsEnum(KycStatus)
   kycStatus?: KycStatus;
-
   @ApiProperty({
     required: false,
     example: 1,
@@ -48,7 +43,6 @@ export class FilterUsersDto {
   @IsInt()
   @Min(1)
   page?: number = 1;
-
   @ApiProperty({
     required: false,
     example: 10,

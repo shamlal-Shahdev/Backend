@@ -5,7 +5,6 @@ import { AdminDashboardService } from './dashboard.service';
 import { UserEntity } from '../../user/entity/user.entity';
 import { InstallationEntity } from '../../installation/entity/installation.entity';
 import { EnergyRequestEntity } from '../../energy-request/entity/energy-request.entity';
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([

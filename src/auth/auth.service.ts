@@ -1,5 +1,6 @@
 import {
   HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   ForbiddenException,
@@ -11,7 +12,6 @@ import { LoginDto } from './dto/login.dto';
 import { UserService } from '../user/user.service';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
 import { EmailService } from '../email/email.service';
-// import { KycService } from '../kyc/kyc.service'; // KYC module not found
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from '../config/config.type';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
@@ -25,22 +25,17 @@ import {
   UserNotFoundException,
 } from './exceptions/auth.exceptions';
 import { CreateUserDto } from '../user/dto/create-user.dto';
-
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-
   constructor(
     private jwtService: JwtService,
     private usersService: UserService,
     private emailService: EmailService,
-    // private kycService: KycService, // KYC module not found
     private configService: ConfigService<AllConfigType>,
   ) {}
-
   async register(registerDto: RegisterDto): Promise<void> {
     try {
-      // Check if user already exists
       const existingUser = await this.usersService.findByEmail(
         registerDto.email,
       );
@@ -50,15 +45,9 @@ export class AuthService {
         );
         throw new UserExistsException();
       }
-
-      // Hash password
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(registerDto.password, salt);
-
-      // Generate verification token
       const verificationToken = randomStringGenerator();
-
-      // Create user
       const user = await this.usersService.create({
         name:
           registerDto.firstName && registerDto.lastName
@@ -66,7 +55,7 @@ export class AuthService {
             : registerDto.email.split('@')[0],
         email: registerDto.email,
         passwordHash: hashedPassword,
-        walletAddress: `0x${Math.random().toString(16).substr(2, 40)}`, // Generate wallet address
+        walletAddress: `0x${Math.random().toString(16).substr(2, 40)}`, 
         isVerified: false,
         verificationToken,
         resetToken: null,
@@ -74,10 +63,7 @@ export class AuthService {
         phone: registerDto.phone,
         role: UserRole.USER,
       } as CreateUserDto);
-
       this.logger.log(`User created successfully: ${user.email}`);
-
-      // Send verification email
       await this.emailService.sendVerificationEmail(
         registerDto.email,
         verificationToken,
@@ -88,25 +74,17 @@ export class AuthService {
       throw error;
     }
   }
-
   async login(loginDto: LoginDto): Promise<{ token: string; user: any }> {
     try {
-      // Normalize email to lowercase for consistent lookup
       const normalizedEmail = loginDto.email?.toLowerCase().trim();
-
       if (!normalizedEmail) {
         this.logger.error('❌ Login attempt with empty email');
         throw new UserNotFoundException(
           'Email is required. Please provide a valid email address.',
         );
       }
-
       this.logger.log(`🔐 Login attempt for email: ${normalizedEmail}`);
-
-      // Find user by email - this should return null if user doesn't exist
       const user = await this.usersService.findByEmail(normalizedEmail);
-
-      // STRICT CHECK: User must exist
       if (!user || !user.id) {
         this.logger.warn(
           `❌ Login attempt with non-existent email: ${normalizedEmail}`,
@@ -114,8 +92,6 @@ export class AuthService {
         this.logger.warn(
           `📊 User lookup returned: ${user === null ? 'null' : 'undefined or invalid user object'}`,
         );
-
-        // Throw UserNotFoundException with clear message to register first
         const error = new UserNotFoundException(
           'This email is not registered. Please register first to create an account.',
         );
@@ -128,25 +104,19 @@ export class AuthService {
         );
         throw error;
       }
-
       this.logger.log(
         `📧 User found - ID: ${user.id}, Email: ${user.email}, Verified: ${user.isVerified}`,
       );
-
-      // Check if user is verified
       if (!user.isVerified) {
         this.logger.warn(
           `⚠️ Login attempt with unverified email: ${normalizedEmail}`,
         );
         throw new UnverifiedUserException();
       }
-
-      // Verify password - user.passwordHash must exist
       if (!user.passwordHash) {
         this.logger.error(`🔒 User ${user.id} has no password set`);
         throw new InvalidCredentialsException();
       }
-
       const isPasswordValid = await bcrypt.compare(
         loginDto.password,
         user.passwordHash,
@@ -157,8 +127,6 @@ export class AuthService {
         );
         throw new InvalidCredentialsException();
       }
-
-      // Check if user is admin - admins must use admin login endpoint
       if (user.role === UserRole.ADMIN) {
         this.logger.warn(
           `🚫 Admin login attempt through user endpoint: ${normalizedEmail}`,
@@ -167,17 +135,11 @@ export class AuthService {
           'Admin users must use the admin login endpoint. Please use the admin login page.',
         );
       }
-
-      // Generate JWT token only if all checks pass
       const payload: JwtPayloadType = { id: user.id, email: user.email };
       const token = await this.generateToken(payload);
-
       this.logger.log(
         `✅ User logged in successfully: ${user.email} (ID: ${user.id})`,
       );
-      
-      // Return plain object to avoid circular reference issues during serialization
-      // Exclude passwordHash and relation properties
       const userResponse = {
         id: user.id,
         email: user.email,
@@ -191,13 +153,11 @@ export class AuthService {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
-      
       return { token, user: userResponse }; 
     } catch (error) {
       this.logger.error('❌ Error during login:', error);
       this.logger.error(`❌ Error type: ${error?.constructor?.name}`);
       this.logger.error(`❌ Error message: ${error?.message}`);
-
       if (error instanceof HttpException) {
         this.logger.error(`📤 Exception status: ${error.getStatus()}`);
         this.logger.error(
@@ -205,12 +165,9 @@ export class AuthService {
           JSON.stringify(error.getResponse(), null, 2),
         );
       }
-
-      // Re-throw the error - don't catch and transform it
       throw error;
     }
   }
-
   async verifyEmail(token: string): Promise<{ role: string }> {
     try {
       console.log('Verification Token:', token);
@@ -219,7 +176,6 @@ export class AuthService {
         this.logger.warn(`Invalid verification token attempt: ${token}`);
         throw new InvalidTokenException('verification');
       }
-
       await this.usersService.update(user.id, {
         isVerified: true,
         verificationToken: null as any,
@@ -231,7 +187,6 @@ export class AuthService {
       throw error;
     }
   }
-
   async forgotPassword(email: string): Promise<void> {
     try {
       const user = await this.usersService.findByEmail(email);
@@ -241,7 +196,6 @@ export class AuthService {
         );
         throw new UserNotFoundException();
       }
-
       const resetToken = randomStringGenerator();
       await this.usersService.update(user.id, {
         resetToken: resetToken as any,
@@ -253,7 +207,6 @@ export class AuthService {
       throw error;
     }
   }
-
   async resetPassword(token: string, newPassword: string): Promise<void> {
     try {
       const user = await this.usersService.findByResetToken(token);
@@ -261,13 +214,11 @@ export class AuthService {
         this.logger.warn(`Invalid reset token attempt: ${token}`);
         throw new InvalidTokenException('reset');
       }
-
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-
       await this.usersService.update(user.id, {
         passwordHash: hashedPassword,
-        password: hashedPassword, // Alias
+        password: hashedPassword, 
         resetToken: null,
       } as any);
       this.logger.log(`Password reset successfully for user: ${user.email}`);
@@ -276,10 +227,48 @@ export class AuthService {
       throw error;
     }
   }
-
+  async resendVerificationEmail(email: string): Promise<void> {
+    try {
+      const normalizedEmail = email?.toLowerCase().trim();
+      if (!normalizedEmail) {
+        this.logger.error('Resend verification attempt with empty email');
+        throw new UserNotFoundException('Email is required.');
+      }
+      const user = await this.usersService.findByEmail(normalizedEmail);
+      if (!user) {
+        this.logger.warn(
+          `Resend verification attempt for non-existent email: ${normalizedEmail}`,
+        );
+        throw new UserNotFoundException('User not found with this email address.');
+      }
+      if (user.isVerified) {
+        this.logger.warn(
+          `Resend verification attempt for already verified user: ${normalizedEmail}`,
+        );
+        throw new HttpException(
+          'This email is already verified. Please login to continue.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      let verificationToken = user.verificationToken;
+      if (!verificationToken) {
+        verificationToken = randomStringGenerator();
+        await this.usersService.update(user.id, {
+          verificationToken: verificationToken as any,
+        });
+      }
+      await this.emailService.sendVerificationEmail(
+        normalizedEmail,
+        verificationToken,
+      );
+      this.logger.log(`Verification email resent to: ${normalizedEmail}`);
+    } catch (error) {
+      this.logger.error('Error during resend verification email:', error);
+      throw error;
+    }
+  }
   async me(userJwtPayload: JwtPayloadType): Promise<User> {
     try {
-      // Convert string ID to number if needed
       const userId =
         typeof userJwtPayload.id === 'string'
           ? parseInt(userJwtPayload.id, 10)
@@ -289,7 +278,6 @@ export class AuthService {
         this.logger.warn(`User not found for ID: ${userJwtPayload.id}`);
         throw new UserNotFoundException();
       }
-
       this.logger.log(`📧 User profile fetched:`, {
         id: user.id,
         email: user.email,
@@ -297,14 +285,12 @@ export class AuthService {
         phone: user.phone,
         hasPhone: !!user.phone,
       });
-
       return user;
     } catch (error) {
       this.logger.error('Error fetching user profile:', error);
       throw error;
     }
   }
-
   async updateMe(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
     try {
       const userIdNum = parseInt(userId, 10);
@@ -326,7 +312,6 @@ export class AuthService {
       throw error;
     }
   }
-
   private async generateToken(payload: JwtPayloadType): Promise<string> {
     try {
       return await this.jwtService.signAsync(payload, {

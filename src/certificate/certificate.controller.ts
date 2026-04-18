@@ -29,7 +29,6 @@ import { CertificateService } from './certificate.service';
 import { CreateCertificateDto } from './dto/create-certificate.dto';
 import { UpdateCertificateDto } from './dto/update-certificate.dto';
 import { CertificateEntity } from './entity/certificate.entity';
-
 @ApiTags('Certificates')
 @Controller({
   path: 'certificates',
@@ -39,7 +38,6 @@ import { CertificateEntity } from './entity/certificate.entity';
 @ApiBearerAuth()
 export class CertificateController {
   constructor(private readonly certificateService: CertificateService) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new certificate' })
   @ApiResponse({
@@ -54,7 +52,6 @@ export class CertificateController {
   ): Promise<CertificateEntity> {
     return this.certificateService.create(createCertificateDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all certificates with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -71,7 +68,6 @@ export class CertificateController {
   ) {
     return this.certificateService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a certificate by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -85,7 +81,6 @@ export class CertificateController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<CertificateEntity> {
     return this.certificateService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a certificate' })
   @ApiParam({ name: 'id', type: Number })
@@ -102,7 +97,6 @@ export class CertificateController {
   ): Promise<CertificateEntity> {
     return this.certificateService.update(id, updateCertificateDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a certificate' })
   @ApiParam({ name: 'id', type: Number })

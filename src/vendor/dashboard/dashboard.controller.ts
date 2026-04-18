@@ -9,7 +9,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { VendorGuard } from '../../auth/guards/vendor.guard';
 import { VendorDashboardService } from './dashboard.service';
 import { VendorDashboardResponseDto } from './dto/vendor-dashboard-response.dto';
-
 @ApiTags('Vendor - Dashboard')
 @Controller({
   path: 'vendor/dashboard',
@@ -19,7 +18,6 @@ import { VendorDashboardResponseDto } from './dto/vendor-dashboard-response.dto'
 @ApiBearerAuth()
 export class VendorDashboardController {
   constructor(private readonly vendorDashboardService: VendorDashboardService) {}
-
   @Get('stats')
   @ApiOperation({ summary: 'Get vendor dashboard statistics' })
   @ApiResponse({

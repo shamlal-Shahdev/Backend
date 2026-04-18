@@ -24,7 +24,6 @@ import { ApproveEnergyRequestDto } from '../../energy-request/dto/approve-energy
 import { RejectEnergyRequestDto } from '../../energy-request/dto/reject-energy-request.dto';
 import { EnergyRequestResponseDto } from '../../energy-request/dto/energy-request-response.dto';
 import { EnergyRequestStatus } from '../../energy-request/entity/energy-request.entity';
-
 @ApiTags('Admin - Energy Requests')
 @Controller({
   path: 'admin/energy-requests',
@@ -36,7 +35,6 @@ export class AdminEnergyRequestController {
   constructor(
     private readonly adminEnergyRequestService: AdminEnergyRequestService,
   ) {}
-
   @Get()
   @ApiOperation({ summary: 'Get all energy requests (optionally filtered by status)' })
   @ApiQuery({
@@ -64,7 +62,6 @@ export class AdminEnergyRequestController {
   ): Promise<{ requests: EnergyRequestResponseDto[]; total: number }> {
     return this.adminEnergyRequestService.getAllEnergyRequests(status);
   }
-
   @Get('pending')
   @ApiOperation({ summary: 'Get all pending energy requests' })
   @ApiResponse({
@@ -87,7 +84,6 @@ export class AdminEnergyRequestController {
   }> {
     return this.adminEnergyRequestService.getPendingEnergyRequests();
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get energy request by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Energy request ID' })
@@ -102,7 +98,6 @@ export class AdminEnergyRequestController {
   ): Promise<EnergyRequestResponseDto> {
     return this.adminEnergyRequestService.getEnergyRequestById(id);
   }
-
   @Post(':id/approve')
   @ApiOperation({ summary: 'Approve energy request and generate reward' })
   @ApiParam({ name: 'id', type: Number, description: 'Energy request ID' })
@@ -120,10 +115,8 @@ export class AdminEnergyRequestController {
   ): Promise<EnergyRequestResponseDto> {
     const adminId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
-
     return this.adminEnergyRequestService.approveEnergyRequest(id, adminId, dto);
   }
-
   @Post(':id/reject')
   @ApiOperation({ summary: 'Reject energy request' })
   @ApiParam({ name: 'id', type: Number, description: 'Energy request ID' })
@@ -141,8 +134,6 @@ export class AdminEnergyRequestController {
   ): Promise<EnergyRequestResponseDto> {
     const adminId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
-
     return this.adminEnergyRequestService.rejectEnergyRequest(id, adminId, dto);
   }
 }
-

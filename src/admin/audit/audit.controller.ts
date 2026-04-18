@@ -7,7 +7,6 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminAuditService } from './audit.service';
-
 @ApiTags('Admin - Audit')
 @Controller({
   path: 'admin/audit-logs',
@@ -17,7 +16,6 @@ import { AdminAuditService } from './audit.service';
 @ApiBearerAuth()
 export class AdminAuditController {
   constructor(private readonly adminAuditService: AdminAuditService) {}
-
   @Get()
   @ApiOperation({ summary: 'Get audit logs' })
   @ApiResponse({

@@ -4,14 +4,12 @@ import { Repository } from 'typeorm';
 import { MarketplaceItemEntity } from './entity/marketplace-item.entity';
 import { CreateMarketplaceItemDto } from './dto/create-marketplace-item.dto';
 import { UpdateMarketplaceItemDto } from './dto/update-marketplace-item.dto';
-
 @Injectable()
 export class MarketplaceItemService {
   constructor(
     @InjectRepository(MarketplaceItemEntity)
     private readonly marketplaceItemRepository: Repository<MarketplaceItemEntity>,
   ) {}
-
   async create(
     createMarketplaceItemDto: CreateMarketplaceItemDto,
   ): Promise<MarketplaceItemEntity> {
@@ -20,7 +18,6 @@ export class MarketplaceItemService {
     );
     return await this.marketplaceItemRepository.save(marketplaceItem);
   }
-
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -32,19 +29,15 @@ export class MarketplaceItemService {
     });
     return [data, total];
   }
-
   async findOne(id: number): Promise<MarketplaceItemEntity> {
     const marketplaceItem = await this.marketplaceItemRepository.findOne({
       where: { id },
     });
-
     if (!marketplaceItem) {
       throw new NotFoundException(`Marketplace Item with ID ${id} not found`);
     }
-
     return marketplaceItem;
   }
-
   async update(
     id: number,
     updateMarketplaceItemDto: UpdateMarketplaceItemDto,
@@ -53,7 +46,6 @@ export class MarketplaceItemService {
     Object.assign(marketplaceItem, updateMarketplaceItemDto);
     return await this.marketplaceItemRepository.save(marketplaceItem);
   }
-
   async remove(id: number): Promise<void> {
     const marketplaceItem = await this.findOne(id);
     await this.marketplaceItemRepository.remove(marketplaceItem);

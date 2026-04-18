@@ -29,7 +29,6 @@ import { RedemptionService } from './redemption.service';
 import { CreateRedemptionDto } from './dto/create-redemption.dto';
 import { UpdateRedemptionDto } from './dto/update-redemption.dto';
 import { RedemptionEntity } from './entity/redemption.entity';
-
 @ApiTags('Redemptions')
 @Controller({
   path: 'redemptions',
@@ -39,7 +38,6 @@ import { RedemptionEntity } from './entity/redemption.entity';
 @ApiBearerAuth()
 export class RedemptionController {
   constructor(private readonly redemptionService: RedemptionService) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new redemption' })
   @ApiResponse({
@@ -54,7 +52,6 @@ export class RedemptionController {
   ): Promise<RedemptionEntity> {
     return this.redemptionService.create(createRedemptionDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all redemptions with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -71,7 +68,6 @@ export class RedemptionController {
   ) {
     return this.redemptionService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a redemption by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -85,7 +81,6 @@ export class RedemptionController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<RedemptionEntity> {
     return this.redemptionService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a redemption (complete/cancel)' })
   @ApiParam({ name: 'id', type: Number })
@@ -102,7 +97,6 @@ export class RedemptionController {
   ): Promise<RedemptionEntity> {
     return this.redemptionService.update(id, updateRedemptionDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a redemption' })
   @ApiParam({ name: 'id', type: Number })

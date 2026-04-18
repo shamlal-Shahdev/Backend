@@ -12,7 +12,6 @@ import { KycModule } from '../kyc/kyc.module';
 import { KycEntity } from '../kyc/entity/kyc.entity';
 import { UserEntity } from '../user/entity/user.entity';
 import { AuthController } from './auth.controller';
-
 @Module({
   imports: [
     UserModule,

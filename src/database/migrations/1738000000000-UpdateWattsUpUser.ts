@@ -1,10 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-
 export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
   name = 'UpdateWattsUpUser1738000000000';
-
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Drop old constraints and indexes
     await queryRunner.query(
       `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "FK_dc18daa696860586ba4667a9d31"`,
     );
@@ -26,8 +23,6 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX IF EXISTS "IDX_9bd2fe7a8e694dedc4ec2f666f"`,
     );
-
-    // Drop old columns
     await queryRunner.query(
       `ALTER TABLE "user" DROP COLUMN IF EXISTS "photoId"`,
     );
@@ -52,8 +47,6 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "user" DROP COLUMN IF EXISTS "deletedAt"`,
     );
-
-    // Change id from SERIAL to UUID
     await queryRunner.query(
       `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "PK_cace4a159ff9f2512dd42373760"`,
     );
@@ -69,21 +62,15 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id")`,
     );
-
-    // Make email required and unique
     await queryRunner.query(
       `ALTER TABLE "user" ALTER COLUMN "email" SET NOT NULL`,
     );
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email")`,
     );
-
-    // Make password required
     await queryRunner.query(
       `ALTER TABLE "user" ALTER COLUMN "password" SET NOT NULL`,
     );
-
-    // Add new columns
     await queryRunner.query(
       `ALTER TABLE "user" ADD COLUMN "name" character varying NOT NULL`,
     );
@@ -99,8 +86,6 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "user" ADD COLUMN "resetToken" character varying`,
     );
-
-    // Create indexes for tokens
     await queryRunner.query(
       `CREATE INDEX "IDX_verificationToken" ON "user" ("verificationToken")`,
     );
@@ -108,13 +93,9 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
       `CREATE INDEX "IDX_resetToken" ON "user" ("resetToken")`,
     );
   }
-
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Drop new indexes
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_resetToken"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_verificationToken"`);
-
-    // Drop new columns
     await queryRunner.query(
       `ALTER TABLE "user" DROP COLUMN IF EXISTS "resetToken"`,
     );
@@ -128,21 +109,15 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
       `ALTER TABLE "user" DROP COLUMN IF EXISTS "installationType"`,
     );
     await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "name"`);
-
-    // Revert password
     await queryRunner.query(
       `ALTER TABLE "user" ALTER COLUMN "password" DROP NOT NULL`,
     );
-
-    // Revert email
     await queryRunner.query(
       `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "UQ_e12875dfb3b1d92d7d7c5377e22"`,
     );
     await queryRunner.query(
       `ALTER TABLE "user" ALTER COLUMN "email" DROP NOT NULL`,
     );
-
-    // Revert id to SERIAL
     await queryRunner.query(
       `ALTER TABLE "user" DROP CONSTRAINT IF EXISTS "PK_cace4a159ff9f2512dd42373760"`,
     );
@@ -158,8 +133,6 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id")`,
     );
-
-    // Re-add old columns
     await queryRunner.query(
       `ALTER TABLE "user" ADD COLUMN "deletedAt" TIMESTAMP`,
     );
@@ -178,8 +151,6 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE "user" ADD COLUMN "statusId" integer`);
     await queryRunner.query(`ALTER TABLE "user" ADD COLUMN "roleId" integer`);
     await queryRunner.query(`ALTER TABLE "user" ADD COLUMN "photoId" uuid`);
-
-    // Re-add old indexes
     await queryRunner.query(
       `CREATE INDEX "IDX_9bd2fe7a8e694dedc4ec2f666f" ON "user" ("socialId")`,
     );
@@ -189,8 +160,6 @@ export class UpdateWattsUpUser1738000000000 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "IDX_f0e1b4ecdca13b177e2e3a0613" ON "user" ("lastName")`,
     );
-
-    // Re-add old constraints
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email")`,
     );

@@ -8,43 +8,32 @@ import {
   IsString,
   IsBoolean,
 } from 'class-validator';
-
 class EnvironmentVariablesValidator {
   @IsString()
   MAIL_HOST: string;
-
   @IsInt()
   @IsOptional()
   MAIL_PORT: number;
-
   @IsString()
   MAIL_USER: string;
-
   @IsString()
   MAIL_PASSWORD: string;
-
   @IsBoolean()
   @IsOptional()
   MAIL_SECURE: boolean;
-
   @IsBoolean()
   @IsOptional()
   MAIL_REQUIRE_TLS: boolean;
-
   @IsBoolean()
   @IsOptional()
   MAIL_IGNORE_TLS: boolean;
-
   @IsString()
   MAIL_DEFAULT_NAME: string;
-
   @IsEmail()
   MAIL_DEFAULT_EMAIL: string;
 }
-
 export default registerAs<EmailConfig>('mail', () => {
   validateConfig(process.env, EnvironmentVariablesValidator);
-
   return {
     host: process.env.MAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.MAIL_PORT || '587', 10),

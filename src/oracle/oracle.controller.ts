@@ -29,7 +29,6 @@ import { OracleService } from './oracle.service';
 import { CreateOracleDto } from './dto/create-oracle.dto';
 import { UpdateOracleDto } from './dto/update-oracle.dto';
 import { OracleEntity } from './entity/oracle.entity';
-
 @ApiTags('Oracles')
 @Controller({
   path: 'oracles',
@@ -39,7 +38,6 @@ import { OracleEntity } from './entity/oracle.entity';
 @ApiBearerAuth()
 export class OracleController {
   constructor(private readonly oracleService: OracleService) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new oracle' })
   @ApiResponse({
@@ -52,7 +50,6 @@ export class OracleController {
   create(@Body() createOracleDto: CreateOracleDto): Promise<OracleEntity> {
     return this.oracleService.create(createOracleDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all oracles with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -69,7 +66,6 @@ export class OracleController {
   ) {
     return this.oracleService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get an oracle by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -79,7 +75,6 @@ export class OracleController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<OracleEntity> {
     return this.oracleService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update an oracle' })
   @ApiParam({ name: 'id', type: Number })
@@ -96,7 +91,6 @@ export class OracleController {
   ): Promise<OracleEntity> {
     return this.oracleService.update(id, updateOracleDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an oracle' })
   @ApiParam({ name: 'id', type: Number })

@@ -9,7 +9,6 @@ import { KycEntity } from './entity/kyc.entity';
 import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { UserEntity, KycStatus } from '../user/entity/user.entity';
-
 @Injectable()
 export class KycService {
   constructor(
@@ -18,25 +17,20 @@ export class KycService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
-
   async create(createKycDto: CreateKycDto): Promise<KycEntity> {
     try {
       const kyc = this.kycRepository.create(createKycDto);
       const savedKyc = await this.kycRepository.save(kyc);
-
-      // Update user's KYC status to pending
       await this.userRepository.update(
         { id: createKycDto.userId },
         { kycStatus: KycStatus.IN_REVIEW },
       );
-
       return savedKyc;
     } catch (error) {
       console.error('Failed to create KYC document', error);
       throw new InternalServerErrorException('Failed to create KYC document');
     }
   }
-
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -49,31 +43,25 @@ export class KycService {
     });
     return [data, total];
   }
-
   async findOne(id: number): Promise<KycEntity> {
     const kyc = await this.kycRepository.findOne({
       where: { id },
       relations: ['user'],
     });
-
     if (!kyc) {
       throw new NotFoundException(`KYC Document with ID ${id} not found`);
     }
-
     return kyc;
   }
-
   async update(id: number, updateKycDto: UpdateKycDto): Promise<KycEntity> {
     const kyc = await this.findOne(id);
     Object.assign(kyc, updateKycDto);
     return await this.kycRepository.save(kyc);
   }
-
   async remove(id: number): Promise<void> {
     const kyc = await this.findOne(id);
     await this.kycRepository.remove(kyc);
   }
-
   async getUserKycStatus(userId: number): Promise<{
     status: KycStatus;
     userId: number;
@@ -90,12 +78,9 @@ export class KycService {
       where: { id: userId },
       select: ['id', 'kycStatus'],
     });
-
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-
-    // Fetch KYC documents to get admin notes
     const kycDocuments = await this.kycRepository.find({
       where: { userId },
       order: { submittedAt: 'DESC' },
@@ -109,19 +94,13 @@ export class KycService {
         'UtilityBillUrl',
       ],
     });
-
-    // Extract rejection reason from the most recent document with admin notes
-    // When admin rejects, all documents for that submission get the same adminNotes
     let rejectionReason: string | null = null;
     if (kycDocuments.length > 0) {
-      // Get the most recent document (first in DESC order) and check for admin notes
       const mostRecentDoc = kycDocuments[0];
       if (mostRecentDoc.adminNotes) {
         rejectionReason = mostRecentDoc.adminNotes;
       }
     }
-
-    // Format documents for response - each KYC entity contains all 4 document types
     const documents: Array<{
       id: number;
       docType: string;
@@ -129,8 +108,6 @@ export class KycService {
       submittedAt: Date;
       adminNotes?: string | null;
     }> = [];
-
-    // For each KYC submission, create entries for each document type
     kycDocuments.forEach((doc) => {
       const docTypes = [
         { type: 'cnic_front', url: doc.CnicFrontUrl },
@@ -138,7 +115,6 @@ export class KycService {
         { type: 'selfie', url: doc.SelfieUrl },
         { type: 'utility_bill', url: doc.UtilityBillUrl },
       ];
-
       docTypes.forEach(({ type, url }) => {
         if (url) {
           documents.push({
@@ -151,7 +127,6 @@ export class KycService {
         }
       });
     });
-
     return {
       status: user.kycStatus,
       userId: user.id,

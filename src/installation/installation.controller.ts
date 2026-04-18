@@ -30,7 +30,6 @@ import { InstallationService } from './installation.service';
 import { CreateInstallationDto } from './dto/create-installation.dto';
 import { UpdateInstallationDto } from './dto/update-installation.dto';
 import { InstallationEntity } from './entity/installation.entity';
-
 @ApiTags('Installations')
 @Controller({
   path: 'installations',
@@ -40,7 +39,6 @@ import { InstallationEntity } from './entity/installation.entity';
 @ApiBearerAuth()
 export class InstallationController {
   constructor(private readonly installationService: InstallationService) {}
-
   @Post()
   @ApiOperation({ summary: 'Submit installation request' })
   @ApiResponse({
@@ -54,17 +52,13 @@ export class InstallationController {
     @Request() req,
     @Body() createInstallationDto: CreateInstallationDto,
   ): Promise<InstallationEntity> {
-    // Extract userId from JWT token
     const userId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
-
-    // Add userId to DTO
     return this.installationService.create({
       ...createInstallationDto,
       userId,
     });
   }
-
   @Get()
   @ApiOperation({ summary: 'Get installations with pagination (filtered by user for regular users)' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -83,13 +77,9 @@ export class InstallationController {
     const userId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     const userRole = req.user.role;
-
-    // If user is not admin, filter by userId
     if (userRole !== 'admin') {
       return this.installationService.findByUserId(userId, page, limit);
     }
-
-    // Admin sees all installations
     const [data, total] = await this.installationService.findAll(page, limit);
     return {
       data,
@@ -98,7 +88,6 @@ export class InstallationController {
       limit,
     };
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get an installation by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -112,7 +101,6 @@ export class InstallationController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<InstallationEntity> {
     return this.installationService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update an installation' })
   @ApiParam({ name: 'id', type: Number })
@@ -129,7 +117,6 @@ export class InstallationController {
   ): Promise<InstallationEntity> {
     return this.installationService.update(id, updateInstallationDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Cancel/Delete an installation (users can cancel SUBMITTED, admin can delete any)' })
   @ApiParam({ name: 'id', type: Number })
@@ -148,16 +135,11 @@ export class InstallationController {
     const userId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     const userRole = req.user.role;
-
-    // If user is not admin, use cancelInstallation (only SUBMITTED status)
     if (userRole !== 'admin') {
       return this.installationService.cancelInstallation(id, userId);
     }
-
-    // Admin can delete any installation
     return this.installationService.remove(id);
   }
-
   @Get('user/installations')
   @ApiOperation({ summary: 'Get all installations for a user' })
   @ApiResponse({

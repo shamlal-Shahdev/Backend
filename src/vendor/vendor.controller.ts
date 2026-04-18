@@ -17,7 +17,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity, UserRole } from '../user/entity/user.entity';
-
 @ApiTags('Vendors')
 @Controller({
   path: 'vendors',
@@ -30,7 +29,6 @@ export class VendorController {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
-
   @Get()
   @ApiOperation({ summary: 'Get verified vendors list' })
   @ApiQuery({
@@ -61,12 +59,9 @@ export class VendorController {
       select: ['id', 'name', 'email', 'phone', 'companyName', 'isVerified', 'role'],
       order: { name: 'ASC' },
     });
-
     return {
       vendors,
       total: vendors.length,
     };
   }
 }
-
-

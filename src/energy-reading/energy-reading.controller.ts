@@ -29,7 +29,6 @@ import { EnergyReadingService } from './energy-reading.service';
 import { CreateEnergyReadingDto } from './dto/create-energy-reading.dto';
 import { UpdateEnergyReadingDto } from './dto/update-energy-reading.dto';
 import { EnergyReadingEntity } from './entity/energy-reading.entity';
-
 @ApiTags('Energy Readings')
 @Controller({
   path: 'energy-readings',
@@ -39,7 +38,6 @@ import { EnergyReadingEntity } from './entity/energy-reading.entity';
 @ApiBearerAuth()
 export class EnergyReadingController {
   constructor(private readonly energyReadingService: EnergyReadingService) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new energy reading' })
   @ApiResponse({
@@ -54,7 +52,6 @@ export class EnergyReadingController {
   ): Promise<EnergyReadingEntity> {
     return this.energyReadingService.create(createEnergyReadingDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all energy readings with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -71,7 +68,6 @@ export class EnergyReadingController {
   ) {
     return this.energyReadingService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get an energy reading by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -85,7 +81,6 @@ export class EnergyReadingController {
   findOne(@Param('id', ParseIntPipe) id: number): Promise<EnergyReadingEntity> {
     return this.energyReadingService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update an energy reading' })
   @ApiParam({ name: 'id', type: Number })
@@ -102,7 +97,6 @@ export class EnergyReadingController {
   ): Promise<EnergyReadingEntity> {
     return this.energyReadingService.update(id, updateEnergyReadingDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an energy reading' })
   @ApiParam({ name: 'id', type: Number })

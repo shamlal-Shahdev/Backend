@@ -29,7 +29,6 @@ import { MarketplaceItemService } from './marketplace-item.service';
 import { CreateMarketplaceItemDto } from './dto/create-marketplace-item.dto';
 import { UpdateMarketplaceItemDto } from './dto/update-marketplace-item.dto';
 import { MarketplaceItemEntity } from './entity/marketplace-item.entity';
-
 @ApiTags('Marketplace Items')
 @Controller({
   path: 'marketplace-items',
@@ -41,7 +40,6 @@ export class MarketplaceItemController {
   constructor(
     private readonly marketplaceItemService: MarketplaceItemService,
   ) {}
-
   @Post()
   @ApiOperation({ summary: 'Create a new marketplace item' })
   @ApiResponse({
@@ -56,7 +54,6 @@ export class MarketplaceItemController {
   ): Promise<MarketplaceItemEntity> {
     return this.marketplaceItemService.create(createMarketplaceItemDto);
   }
-
   @Get()
   @ApiOperation({ summary: 'Get all marketplace items with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -73,7 +70,6 @@ export class MarketplaceItemController {
   ) {
     return this.marketplaceItemService.findAll(page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a marketplace item by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -89,7 +85,6 @@ export class MarketplaceItemController {
   ): Promise<MarketplaceItemEntity> {
     return this.marketplaceItemService.findOne(id);
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update a marketplace item' })
   @ApiParam({ name: 'id', type: Number })
@@ -106,7 +101,6 @@ export class MarketplaceItemController {
   ): Promise<MarketplaceItemEntity> {
     return this.marketplaceItemService.update(id, updateMarketplaceItemDto);
   }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a marketplace item' })
   @ApiParam({ name: 'id', type: Number })

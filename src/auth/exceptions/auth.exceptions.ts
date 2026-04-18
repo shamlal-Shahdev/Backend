@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-
 export class UserExistsException extends HttpException {
   constructor() {
     super(
@@ -13,7 +12,6 @@ export class UserExistsException extends HttpException {
     );
   }
 }
-
 export class InvalidCredentialsException extends HttpException {
   constructor() {
     super(
@@ -27,7 +25,6 @@ export class InvalidCredentialsException extends HttpException {
     );
   }
 }
-
 export class UnverifiedUserException extends HttpException {
   constructor() {
     super(
@@ -39,7 +36,6 @@ export class UnverifiedUserException extends HttpException {
     );
   }
 }
-
 export class InvalidTokenException extends HttpException {
   constructor(tokenType: string) {
     super(
@@ -53,7 +49,6 @@ export class InvalidTokenException extends HttpException {
     );
   }
 }
-
 export class UserNotFoundException extends HttpException {
   constructor(
     message: string = 'This email is not registered. Please register first to create an account.',

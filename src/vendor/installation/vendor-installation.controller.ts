@@ -23,7 +23,6 @@ import { VendorGuard } from '../../auth/guards/vendor.guard';
 import { VendorInstallationService } from './vendor-installation.service';
 import { UpdateInstallationStatusDto } from './dto/update-installation-status.dto';
 import { InstallationEntity } from '../../installation/entity/installation.entity';
-
 @ApiTags('Vendor - Installations')
 @Controller({
   path: 'vendor/installations',
@@ -35,7 +34,6 @@ export class VendorInstallationController {
   constructor(
     private readonly vendorInstallationService: VendorInstallationService,
   ) {}
-
   @Get()
   @ApiOperation({ summary: 'Get all installations assigned to vendor' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -53,7 +51,6 @@ export class VendorInstallationController {
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     return this.vendorInstallationService.findAll(vendorId, page, limit);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get installation details by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Installation ID' })
@@ -74,7 +71,6 @@ export class VendorInstallationController {
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     return this.vendorInstallationService.findOne(id, vendorId);
   }
-
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update installation status (IN_PROGRESS, COMPLETED, or REJECTED)' })
   @ApiParam({ name: 'id', type: Number, description: 'Installation ID' })
@@ -105,4 +101,3 @@ export class VendorInstallationController {
     );
   }
 }
-

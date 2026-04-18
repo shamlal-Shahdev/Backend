@@ -28,7 +28,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { EnergyRequestService } from './energy-request.service';
 import { EnergyRequestResponseDto } from './dto/energy-request-response.dto';
 import { EnergyRequestEntity } from './entity/energy-request.entity';
-
 @ApiTags('Energy Generation Requests')
 @Controller({
   path: 'energy',
@@ -38,9 +37,8 @@ import { EnergyRequestEntity } from './entity/energy-request.entity';
 @ApiBearerAuth()
 export class EnergyRequestController {
   constructor(private readonly energyRequestService: EnergyRequestService) {}
-
   @Post('upload')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 uploads per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @ApiOperation({ summary: 'Upload smart meter image for energy generation verification' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -90,9 +88,9 @@ export class EnergyRequestController {
   })
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: memoryStorage(), // Use memory storage to access file buffer for validation
+      storage: memoryStorage(), 
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: 5 * 1024 * 1024, 
       },
     }),
   )
@@ -101,23 +99,17 @@ export class EnergyRequestController {
     @Request() req,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<EnergyRequestResponseDto> {
-    // Extract user ID
     const userId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
-
     if (!file) {
       throw new BadRequestException('Meter image file is required');
     }
-
-    // Extract form fields from req.body (multipart/form-data)
     const month = parseInt(req.body?.month, 10);
     const year = parseInt(req.body?.year, 10);
     const meterIdFromImage = req.body?.meterIdFromImage || undefined;
-
     if (!month || !year || isNaN(month) || isNaN(year)) {
       throw new BadRequestException('Month and year are required and must be valid numbers');
     }
-
     const request = await this.energyRequestService.uploadEnergyRequest(
       userId,
       file,
@@ -125,10 +117,8 @@ export class EnergyRequestController {
       year,
       meterIdFromImage,
     );
-
     return request;
   }
-
   @Get('status')
   @ApiOperation({ summary: 'Get current user energy request status' })
   @ApiResponse({
@@ -153,7 +143,6 @@ export class EnergyRequestController {
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
     return this.energyRequestService.getUserEnergyRequestStatus(userId);
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific energy request by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Energy request ID' })
@@ -169,8 +158,6 @@ export class EnergyRequestController {
   ): Promise<EnergyRequestResponseDto> {
     const userId =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
-
     return this.energyRequestService.getUserEnergyRequestById(userId, id);
   }
 }
-

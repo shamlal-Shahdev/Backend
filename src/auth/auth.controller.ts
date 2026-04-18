@@ -22,7 +22,6 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { UserEntity as User } from '../user/entity/user.entity';
 import { Throttle } from '@nestjs/throttler';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
-
 @ApiTags('Auth')
 @Controller({
   path: 'auth',
@@ -30,9 +29,8 @@ import { UpdateUserDto } from '../user/dto/update-user.dto';
 })
 export class AuthController {
   constructor(private readonly service: AuthService) {}
-
   @Post('register')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.CREATED)
   @ApiOkResponse({ description: 'User registered successfully' })
   async register(
@@ -45,9 +43,8 @@ export class AuthController {
         'Registration successful. Please check your email for verification.',
     };
   }
-
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute to prevent brute force
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @SerializeOptions({ groups: ['me'] })
   @ApiOkResponse({
@@ -56,7 +53,6 @@ export class AuthController {
   public login(@Body() loginDto: LoginDto): Promise<LoginResponseDto> {
     return this.service.login(loginDto);
   }
-
   @Get('verify')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Email verified successfully' })
@@ -68,7 +64,6 @@ export class AuthController {
     }
     console.log('Verification Token:', token);
     const { role } = await this.service.verifyEmail(token);
-    // Determine redirect URL based on user role
     const redirectUrl = role === 'vendor' ? '/vendor/login' : '/';
     return {
       message: 'Email verified successfully',
@@ -76,9 +71,8 @@ export class AuthController {
       role,
     };
   }
-
   @Post('forgot-password')
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute to prevent abuse
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Password reset email sent' })
   async forgotPassword(
@@ -87,9 +81,8 @@ export class AuthController {
     await this.service.forgotPassword(forgotPasswordDto.email);
     return { message: 'Password reset email sent. Please check your email.' };
   }
-
   @Post('reset-password')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Password reset successfully' })
   async resetPassword(
@@ -101,7 +94,16 @@ export class AuthController {
     );
     return { message: 'Password reset successfully' };
   }
-
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) 
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ description: 'Verification email resent successfully' })
+  async resendVerificationEmail(
+    @Body() body: { email: string },
+  ): Promise<{ message: string }> {
+    await this.service.resendVerificationEmail(body.email);
+    return { message: 'Verification email sent. Please check your inbox.' };
+  }
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
@@ -112,12 +114,9 @@ export class AuthController {
     type: User,
   })
   async getCurrentUser(@Request() req): Promise<User> {
-    // Since JWT strategy now returns UserEntity, request.user is already the user
-    // But we'll use the service method to ensure we get the latest data from database
     const user = req.user as User;
     return this.service.me({ id: user.id, email: user.email });
   }
-
   @Patch('me')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()

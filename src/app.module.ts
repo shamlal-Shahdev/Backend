@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
-// import { KycModule } from './kyc/kyc.module'; // KYC module not found
 import { AdminModule } from './admin/admin.module';
 import { VendorModule } from './vendor/vendor.module';
 import databaseConfig from './database/config/database.config';
@@ -37,10 +36,10 @@ import { CertificateModule } from './certificate/certificate.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { PredictionResultModule } from './prediction-result/prediction-result.module';
 import { EnergyRequestModule } from './energy-request/energy-request.module';
+import { GeocodeModule } from './geocode/geocode.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BlockchainModule } from './blockchain/blockchain.module';
-// <database-block>
 const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
   .isDocumentDatabase
   ? MongooseModule.forRootAsync({
@@ -52,8 +51,6 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
         return new DataSource(options).initialize();
       },
     });
-// </database-block>
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -61,31 +58,27 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
       load: [databaseConfig, authConfig, appConfig, emailConfig, fileConfig],
       envFilePath: ['.env'],
     }),
-    // Rate limiting: 10 requests per minute per IP
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // 60 seconds
-        limit: 10, // 10 requests
+        ttl: 60000, 
+        limit: 10, 
       },
     ]),
     infrastructureDatabaseModule,
     I18nModule.forRootAsync({
       useFactory: (configService: ConfigService<AllConfigType>) => {
-        // In production (dist), use dist/i18n; in development, use src/i18n
-        // nest-cli.json copies i18n/**/* to dist during build
         const isProduction =
           configService.get('app.nodeEnv', { infer: true }) === 'production';
         const i18nPath = isProduction
           ? path.join(__dirname, 'i18n')
           : path.join(process.cwd(), 'src', 'i18n');
-
         return {
           fallbackLanguage: configService.getOrThrow('app.fallbackLanguage', {
             infer: true,
           }),
           loaderOptions: {
             path: i18nPath,
-            watch: !isProduction, // Only watch in development
+            watch: !isProduction, 
           },
         };
       },
@@ -107,7 +100,6 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
     }),
     FilesModule,
     AuthModule,
-    // KycModule, // KYC module not found
     AdminModule,
     VendorModule,
     SessionModule,
@@ -130,6 +122,7 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
     EnergyRequestModule,
     PredictionResultModule,
     EnergyRequestModule,
+    GeocodeModule,
     BlockchainModule,
   ],
   providers: [
