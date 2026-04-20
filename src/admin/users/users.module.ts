@@ -3,9 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminUsersController } from './users.controller';
 import { AdminUsersService } from './users.service';
 import { UserEntity } from '../../user/entity/user.entity';
-import { KycEntity } from '../../kyc/entity/kyc.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity, KycEntity])],
+  imports: [TypeOrmModule.forFeature([UserEntity])],
   controllers: [AdminUsersController],
   providers: [AdminUsersService],
   exports: [AdminUsersService],

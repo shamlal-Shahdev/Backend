@@ -21,14 +21,27 @@ export class RewardTransactionService {
   async findAll(
     page: number = 1,
     limit: number = 10,
-  ): Promise<[RewardTransactionEntity[], number]> {
-    const [data, total] = await this.rewardTransactionRepository.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      relations: ['user', 'installation', 'oracle'],
-      order: { issuedAt: 'DESC' },
-    });
-    return [data, total];
+    /** When set, only that user's rewards (non-admin API). */
+    filterUserId?: number,
+  ): Promise<{
+    items: RewardTransactionEntity[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const qb = this.rewardTransactionRepository
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'user')
+      .leftJoinAndSelect('r.installation', 'installation')
+      .leftJoinAndSelect('r.oracle', 'oracle')
+      .orderBy('r.issuedAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+    if (filterUserId !== undefined) {
+      qb.andWhere('r.user_id = :filterUserId', { filterUserId });
+    }
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total, page, limit };
   }
   async findOne(id: number): Promise<RewardTransactionEntity> {
     const rewardTransaction = await this.rewardTransactionRepository.findOne({

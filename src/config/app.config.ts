@@ -4,6 +4,7 @@ import validateConfig from '.././utils/validate-config';
 import {
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
@@ -42,6 +43,12 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsOptional()
   APP_HEADER_LANGUAGE: string;
+  @IsNumber()
+  @IsOptional()
+  VENDOR_USAGE_TOKENS_PER_KWH: number;
+  @IsNumber()
+  @IsOptional()
+  CARBON_CO2_KG_PER_KWH: number;
 }
 export default registerAs<AppConfig>('app', () => {
   validateConfig(process.env, EnvironmentVariablesValidator);
@@ -63,5 +70,11 @@ export default registerAs<AppConfig>('app', () => {
     apiPrefix: process.env.API_PREFIX || 'api',
     fallbackLanguage: process.env.APP_FALLBACK_LANGUAGE || 'en',
     headerLanguage: process.env.APP_HEADER_LANGUAGE || 'x-custom-lang',
+    vendorUsageTokensPerKwh: process.env.VENDOR_USAGE_TOKENS_PER_KWH
+      ? parseFloat(process.env.VENDOR_USAGE_TOKENS_PER_KWH)
+      : 0.1,
+    carbonCo2KgPerKwh: process.env.CARBON_CO2_KG_PER_KWH
+      ? parseFloat(process.env.CARBON_CO2_KG_PER_KWH)
+      : 0.05,
   };
 });

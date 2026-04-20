@@ -17,6 +17,17 @@ import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity, UserRole } from '../user/entity/user.entity';
+
+export class VendorListItemDto {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  companyName: string | null;
+  isVerified: boolean;
+  role: UserRole;
+}
+
 @ApiTags('Vendors')
 @Controller({
   path: 'vendors',
@@ -29,6 +40,7 @@ export class VendorController {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
+
   @Get()
   @ApiOperation({ summary: 'Get verified vendors list' })
   @ApiQuery({
@@ -41,7 +53,6 @@ export class VendorController {
   @ApiResponse({
     status: 200,
     description: 'List of verified vendors',
-    type: [UserEntity],
   })
   async getVendors(
     @Query(
@@ -50,18 +61,27 @@ export class VendorController {
       ParseBoolPipe,
     )
     verified: boolean,
-  ): Promise<{ vendors: UserEntity[]; total: number }> {
+  ): Promise<{ vendors: VendorListItemDto[]; total: number }> {
     const vendors = await this.userRepository.find({
       where: {
         role: UserRole.VENDOR,
         isVerified: verified,
       },
-      select: ['id', 'name', 'email', 'phone', 'companyName', 'isVerified', 'role'],
+      relations: ['vendorCompanyProfile'],
       order: { name: 'ASC' },
     });
+    const items: VendorListItemDto[] = vendors.map((v) => ({
+      id: v.id,
+      name: v.name,
+      email: v.email,
+      phone: v.phone,
+      companyName: v.vendorCompanyProfile?.companyName ?? null,
+      isVerified: v.isVerified,
+      role: v.role,
+    }));
     return {
-      vendors,
-      total: vendors.length,
+      vendors: items,
+      total: items.length,
     };
   }
 }

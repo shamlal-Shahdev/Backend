@@ -19,7 +19,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { LoginResponseDto } from './dto/login-response.dto';
-import { UserEntity as User } from '../user/entity/user.entity';
+import { AuthUserResponseDto } from './dto/auth-user-response.dto';
 import { Throttle } from '@nestjs/throttler';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
 @ApiTags('Auth')
@@ -36,7 +36,6 @@ export class AuthController {
   async register(
     @Body() registerDto: RegisterDto,
   ): Promise<{ message: string }> {
-    console.log('Register DTO:', registerDto);
     await this.service.register(registerDto);
     return {
       message:
@@ -62,7 +61,6 @@ export class AuthController {
     if (!token) {
       throw new Error('Verification token is required');
     }
-    console.log('Verification Token:', token);
     const { role } = await this.service.verifyEmail(token);
     const redirectUrl = role === 'vendor' ? '/vendor/login' : '/';
     return {
@@ -111,10 +109,10 @@ export class AuthController {
   @SerializeOptions({ groups: ['me'] })
   @ApiOkResponse({
     description: 'Current user profile',
-    type: User,
+    type: AuthUserResponseDto,
   })
-  async getCurrentUser(@Request() req): Promise<User> {
-    const user = req.user as User;
+  async getCurrentUser(@Request() req): Promise<AuthUserResponseDto> {
+    const user = req.user as { id: number; email: string };
     return this.service.me({ id: user.id, email: user.email });
   }
   @Patch('me')
@@ -124,13 +122,13 @@ export class AuthController {
   @SerializeOptions({ groups: ['me'] })
   @ApiOkResponse({
     description: 'Profile updated successfully',
-    type: User,
+    type: AuthUserResponseDto,
   })
   async updateProfile(
     @Request() req,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<User> {
-    const user = req.user as User;
+  ): Promise<AuthUserResponseDto> {
+    const user = req.user as { id: number };
     return this.service.updateMe(user.id.toString(), updateUserDto);
   }
 }

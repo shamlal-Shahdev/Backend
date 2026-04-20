@@ -76,6 +76,8 @@ export class InstallationEntity extends EntityRelationalHelper {
   status: InstallationStatus;
   @Column({ name: 'vendor_id', type: 'int', nullable: true })
   vendorId: number | null;
+  @Column({ name: 'meter_id', type: 'varchar', length: 255, nullable: true })
+  meterId: string | null;
   @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive: boolean;
   @CreateDateColumn({ name: 'registered_at' })

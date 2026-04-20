@@ -13,6 +13,13 @@ export class RewardDistributionData {
   @ApiProperty({ example: 58.8 })
   percentage: number;
 }
+export class CarbonReductionTrendData {
+  @ApiProperty({ example: '2026-04' })
+  month: string;
+
+  @ApiProperty({ example: 42.64 })
+  carbonReducedKg: number;
+}
 export class DashboardResponseDto {
   @ApiProperty({ example: 1250.5 })
   totalEnergyGenerated: number;
@@ -26,8 +33,14 @@ export class DashboardResponseDto {
   activePredictions: number;
   @ApiProperty({ example: 3 })
   certificatesEarned: number;
+  @ApiProperty({ example: 42.64, description: 'Carbon reduced in current month (kg CO2)' })
+  monthlyCarbonReducedKg: number;
+  @ApiProperty({ example: 300.22, description: 'Total carbon reduced across returned trend (kg CO2)' })
+  totalCarbonReducedKg: number;
   @ApiProperty({ type: [EnergyTrendData], description: 'Energy generation trend by month' })
   energyGenerationTrend: EnergyTrendData[];
+  @ApiProperty({ type: [CarbonReductionTrendData], description: 'Carbon reduction trend by month (kg CO2)' })
+  carbonReductionTrend: CarbonReductionTrendData[];
   @ApiProperty({ type: [RewardDistributionData], description: 'Rewards distribution by category' })
   rewardsDistribution: RewardDistributionData[];
   @ApiProperty({ isArray: true, description: 'Recent activity array' })

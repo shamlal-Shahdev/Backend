@@ -70,7 +70,7 @@ export class WalletBalanceController {
     return this.walletBalanceService.findAll(page, limit);
   }
   @Get('my-balance')
-  @ApiOperation({ summary: 'Get current user wallet balance (synced from blockchain)' })
+  @ApiOperation({ summary: 'Get current user wallet balance from database' })
   @ApiResponse({
     status: 200,
     description: 'Wallet balance retrieved successfully',
@@ -79,6 +79,21 @@ export class WalletBalanceController {
   @ApiResponse({ status: 404, description: 'User wallet not found' })
   @Roles(RoleEnum.user)
   async getMyBalance(@Request() req): Promise<WalletBalanceEntity> {
+    const user = req.user;
+    return await this.walletBalanceService.getOrCreateWalletBalance(user.id);
+  }
+  @Get('my-balance/sync')
+  @ApiOperation({
+    summary: 'Sync current user wallet balance from blockchain',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet balance synced successfully',
+    type: WalletBalanceEntity,
+  })
+  @ApiResponse({ status: 404, description: 'User wallet not found' })
+  @Roles(RoleEnum.user)
+  async syncMyBalance(@Request() req): Promise<WalletBalanceEntity> {
     const user = req.user;
     return await this.walletBalanceService.syncBalanceFromBlockchain(user.id);
   }

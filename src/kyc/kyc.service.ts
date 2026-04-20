@@ -2,35 +2,41 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KycEntity } from './entity/kyc.entity';
 import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
-import { UserEntity, KycStatus } from '../user/entity/user.entity';
+import { UserEntity } from '../user/entity/user.entity';
+import { KycSubmissionStatus } from './kyc-submission-status.enum';
+
 @Injectable()
 export class KycService {
+  private readonly logger = new Logger(KycService.name);
+
   constructor(
     @InjectRepository(KycEntity)
     private readonly kycRepository: Repository<KycEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
+
   async create(createKycDto: CreateKycDto): Promise<KycEntity> {
     try {
-      const kyc = this.kycRepository.create(createKycDto);
-      const savedKyc = await this.kycRepository.save(kyc);
-      await this.userRepository.update(
-        { id: createKycDto.userId },
-        { kycStatus: KycStatus.IN_REVIEW },
-      );
-      return savedKyc;
+      const kyc = this.kycRepository.create({
+        ...createKycDto,
+        status: KycSubmissionStatus.IN_REVIEW,
+        rejectionReason: null,
+      });
+      return await this.kycRepository.save(kyc);
     } catch (error) {
-      console.error('Failed to create KYC document', error);
+      this.logger.error('Failed to create KYC document', error);
       throw new InternalServerErrorException('Failed to create KYC document');
     }
   }
+
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -43,6 +49,7 @@ export class KycService {
     });
     return [data, total];
   }
+
   async findOne(id: number): Promise<KycEntity> {
     const kyc = await this.kycRepository.findOne({
       where: { id },
@@ -53,17 +60,27 @@ export class KycService {
     }
     return kyc;
   }
+
   async update(id: number, updateKycDto: UpdateKycDto): Promise<KycEntity> {
     const kyc = await this.findOne(id);
     Object.assign(kyc, updateKycDto);
     return await this.kycRepository.save(kyc);
   }
+
   async remove(id: number): Promise<void> {
     const kyc = await this.findOne(id);
     await this.kycRepository.remove(kyc);
   }
+
+  async getLatestKycForUser(userId: number): Promise<KycEntity | null> {
+    return this.kycRepository.findOne({
+      where: { userId },
+      order: { submittedAt: 'DESC' },
+    });
+  }
+
   async getUserKycStatus(userId: number): Promise<{
-    status: KycStatus;
+    status: KycSubmissionStatus;
     userId: number;
     rejectionReason?: string | null;
     documents?: Array<{
@@ -76,7 +93,7 @@ export class KycService {
   }> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'kycStatus'],
+      select: ['id'],
     });
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
@@ -92,15 +109,17 @@ export class KycService {
         'CnicBackUrl',
         'SelfieUrl',
         'UtilityBillUrl',
+        'status',
+        'rejectionReason',
       ],
     });
-    let rejectionReason: string | null = null;
-    if (kycDocuments.length > 0) {
-      const mostRecentDoc = kycDocuments[0];
-      if (mostRecentDoc.adminNotes) {
-        rejectionReason = mostRecentDoc.adminNotes;
-      }
-    }
+    const latest = kycDocuments[0];
+    const effectiveStatus =
+      latest?.status ?? KycSubmissionStatus.NOT_SUBMITTED;
+    const rejectionReason =
+      latest?.rejectionReason ||
+      latest?.adminNotes ||
+      null;
     const documents: Array<{
       id: number;
       docType: string;
@@ -120,7 +139,7 @@ export class KycService {
           documents.push({
             id: doc.id,
             docType: type,
-            status: user.kycStatus,
+            status: doc.status,
             submittedAt: doc.submittedAt,
             adminNotes: doc.adminNotes,
           });
@@ -128,7 +147,7 @@ export class KycService {
       });
     });
     return {
-      status: user.kycStatus,
+      status: effectiveStatus,
       userId: user.id,
       rejectionReason,
       documents: documents.length > 0 ? documents : undefined,

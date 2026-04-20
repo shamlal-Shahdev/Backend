@@ -40,4 +40,13 @@ export class CreateRewardTransactionDto {
   @IsOptional()
   @IsInt()
   oracleId?: number;
+  @ApiProperty({ required: false, description: 'Vendor usage import batch (audit)' })
+  @IsOptional()
+  @IsInt()
+  vendorUsageBatchId?: number;
+  @ApiProperty({ required: false, example: '2026-04' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  usagePeriodYearMonth?: string;
 }

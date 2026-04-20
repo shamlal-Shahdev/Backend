@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { VendorGuard } from '../../auth/guards/vendor.guard';
+import { VendorCompanyProfileGuard } from '../../auth/guards/vendor-company-profile.guard';
 import { VendorDashboardService } from './dashboard.service';
 import { VendorDashboardResponseDto } from './dto/vendor-dashboard-response.dto';
 @ApiTags('Vendor - Dashboard')
@@ -14,7 +15,7 @@ import { VendorDashboardResponseDto } from './dto/vendor-dashboard-response.dto'
   path: 'vendor/dashboard',
   version: '1',
 })
-@UseGuards(AuthGuard('jwt'), VendorGuard)
+@UseGuards(AuthGuard('jwt'), VendorGuard, VendorCompanyProfileGuard)
 @ApiBearerAuth()
 export class VendorDashboardController {
   constructor(private readonly vendorDashboardService: VendorDashboardService) {}

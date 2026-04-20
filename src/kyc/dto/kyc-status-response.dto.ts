@@ -1,25 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { KycStatus } from '../../user/entity/user.entity';
+import { KycSubmissionStatus } from '../kyc-submission-status.enum';
+
 export class KycStatusResponseDto {
-  @ApiProperty({ enum: KycStatus, example: KycStatus.PENDING })
-  status: KycStatus;
-  @ApiProperty({ example: 1 })
+  @ApiProperty({ enum: KycSubmissionStatus, example: KycSubmissionStatus.PENDING })
+  status: KycSubmissionStatus;
+
+  @ApiProperty()
   userId: number;
-  @ApiProperty({
-    required: false,
-    nullable: true,
-    example:
-      'Documents are unclear. Please resubmit with better quality images.',
-    description:
-      'Rejection reason or admin feedback (only present if KYC was rejected)',
-  })
+
+  @ApiProperty({ required: false })
   rejectionReason?: string | null;
-  @ApiProperty({
-    required: false,
-    type: [Object],
-    description:
-      'List of submitted KYC documents with their status and admin notes',
-  })
+
+  @ApiProperty({ required: false, type: 'array' })
   documents?: Array<{
     id: number;
     docType: string;

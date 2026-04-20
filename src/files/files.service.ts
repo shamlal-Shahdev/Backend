@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { FileRepository } from './infrastructure/persistence/file.repository';
@@ -46,6 +46,10 @@ export class FilesService {
       key: fileRecord.path,
       url: fileRecord.path,
     };
+  }
+  async readStoredFileByPath(key: string): Promise<Buffer> {
+    const fullFilePath = join(process.cwd(), 'files', key);
+    return readFile(fullFilePath);
   }
   async create(file: Express.Multer.File): Promise<FileType> {
     const fileExtension =

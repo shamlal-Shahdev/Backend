@@ -11,16 +11,21 @@ import { CreateWalletBalanceDto } from './dto/create-wallet-balance.dto';
 import { UpdateWalletBalanceDto } from './dto/update-wallet-balance.dto';
 import { TokenService } from '../blockchain/token.service';
 import { UserEntity } from '../user/entity/user.entity';
+import { UserWalletService } from '../user-wallet/user-wallet.service';
+
 @Injectable()
 export class WalletBalanceService {
   private readonly logger = new Logger(WalletBalanceService.name);
+
   constructor(
     @InjectRepository(WalletBalanceEntity)
     private readonly walletBalanceRepository: Repository<WalletBalanceEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly tokenService: TokenService,
+    private readonly userWalletService: UserWalletService,
   ) {}
+
   async create(
     createWalletBalanceDto: CreateWalletBalanceDto,
   ): Promise<WalletBalanceEntity> {
@@ -37,6 +42,7 @@ export class WalletBalanceService {
     );
     return await this.walletBalanceRepository.save(walletBalance);
   }
+
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -49,6 +55,7 @@ export class WalletBalanceService {
     });
     return [data, total];
   }
+
   async findOne(id: number): Promise<WalletBalanceEntity> {
     const walletBalance = await this.walletBalanceRepository.findOne({
       where: { id },
@@ -59,6 +66,7 @@ export class WalletBalanceService {
     }
     return walletBalance;
   }
+
   async findByUserId(userId: number): Promise<WalletBalanceEntity> {
     const walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
@@ -71,6 +79,7 @@ export class WalletBalanceService {
     }
     return walletBalance;
   }
+
   async update(
     id: number,
     updateWalletBalanceDto: UpdateWalletBalanceDto,
@@ -79,10 +88,12 @@ export class WalletBalanceService {
     Object.assign(walletBalance, updateWalletBalanceDto);
     return await this.walletBalanceRepository.save(walletBalance);
   }
+
   async remove(id: number): Promise<void> {
     const walletBalance = await this.findOne(id);
     await this.walletBalanceRepository.remove(walletBalance);
   }
+
   async getOrCreateWalletBalance(userId: number): Promise<WalletBalanceEntity> {
     let walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
@@ -97,18 +108,21 @@ export class WalletBalanceService {
     }
     return walletBalance;
   }
+
   async syncBalanceFromBlockchain(userId: number): Promise<WalletBalanceEntity> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-    if (!user.walletAddress) {
+    const walletAddress =
+      await this.userWalletService.getWalletAddressForUser(userId);
+    if (!walletAddress) {
       throw new NotFoundException(
-        `User ${userId} does not have a wallet address`,
+        `User ${userId} does not have an on-chain wallet yet`,
       );
     }
     const blockchainBalance = await this.tokenService.getUserBalance(
-      user.walletAddress,
+      walletAddress,
     );
     let walletBalance = await this.walletBalanceRepository.findOne({
       where: { userId },
@@ -127,12 +141,14 @@ export class WalletBalanceService {
     );
     return walletBalance;
   }
+
   async updateBalanceAfterReward(
     userId: number,
     rewardAmount: number,
   ): Promise<WalletBalanceEntity> {
     const walletBalance = await this.getOrCreateWalletBalance(userId);
-    walletBalance.balance = (walletBalance.balance || 0) + rewardAmount;
+    const currentBalance = parseFloat(walletBalance.balance.toString());
+    walletBalance.balance = currentBalance + rewardAmount;
     return await this.walletBalanceRepository.save(walletBalance);
   }
 }

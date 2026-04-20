@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { VendorGuard } from '../../auth/guards/vendor.guard';
+import { VendorCompanyProfileGuard } from '../../auth/guards/vendor-company-profile.guard';
 import { VendorInstallationService } from './vendor-installation.service';
 import { UpdateInstallationStatusDto } from './dto/update-installation-status.dto';
 import { InstallationEntity } from '../../installation/entity/installation.entity';
@@ -28,7 +29,7 @@ import { InstallationEntity } from '../../installation/entity/installation.entit
   path: 'vendor/installations',
   version: '1',
 })
-@UseGuards(AuthGuard('jwt'), VendorGuard)
+@UseGuards(AuthGuard('jwt'), VendorGuard, VendorCompanyProfileGuard)
 @ApiBearerAuth()
 export class VendorInstallationController {
   constructor(
@@ -98,6 +99,7 @@ export class VendorInstallationController {
       id,
       vendorId,
       updateStatusDto,
+      { clientIp: req.ip },
     );
   }
 }

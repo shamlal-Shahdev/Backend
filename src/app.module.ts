@@ -38,6 +38,7 @@ import { PredictionResultModule } from './prediction-result/prediction-result.mo
 import { EnergyRequestModule } from './energy-request/energy-request.module';
 import { GeocodeModule } from './geocode/geocode.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { BlockchainModule } from './blockchain/blockchain.module';
 const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
@@ -64,6 +65,7 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
         limit: 10, 
       },
     ]),
+    ScheduleModule.forRoot(),
     infrastructureDatabaseModule,
     I18nModule.forRootAsync({
       useFactory: (configService: ConfigService<AllConfigType>) => {

@@ -9,6 +9,8 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { EmailModule } from '../email/email.module';
 import { UserModule } from '../user/user.module';
 import { KycModule } from '../kyc/kyc.module';
+import { UserWalletModule } from '../user-wallet/user-wallet.module';
+import { VendorCompanyProfileModule } from '../vendor/company-profile/vendor-company-profile.module';
 import { KycEntity } from '../kyc/entity/kyc.entity';
 import { UserEntity } from '../user/entity/user.entity';
 import { AuthController } from './auth.controller';
@@ -16,6 +18,8 @@ import { AuthController } from './auth.controller';
   imports: [
     UserModule,
     KycModule,
+    UserWalletModule,
+    VendorCompanyProfileModule,
     PassportModule,
     EmailModule,
     JwtModule.register({}),

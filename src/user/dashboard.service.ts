@@ -1,18 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EnergyReadingEntity } from '../energy-reading/entity/energy-reading.entity';
 import { WalletBalanceEntity } from '../wallet-balance/entity/wallet-balance.entity';
 import { CertificateEntity } from '../certificate/entity/certificate.entity';
-import { RewardTransactionEntity } from '../reward-transaction/entity/reward-transaction.entity';
+import {
+  RewardReason,
+  RewardTransactionEntity,
+} from '../reward-transaction/entity/reward-transaction.entity';
 import { PredictionEntity, PredictionStatus } from '../prediction/entity/prediction.entity';
 import { InstallationEntity } from '../installation/entity/installation.entity';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
+import { UserCarbonMetricsService } from './user-carbon-metrics.service';
 @Injectable()
 export class DashboardService {
   constructor(
-    @InjectRepository(EnergyReadingEntity)
-    private readonly energyReadingRepository: Repository<EnergyReadingEntity>,
     @InjectRepository(WalletBalanceEntity)
     private readonly walletBalanceRepository: Repository<WalletBalanceEntity>,
     @InjectRepository(CertificateEntity)
@@ -23,18 +24,16 @@ export class DashboardService {
     private readonly predictionRepository: Repository<PredictionEntity>,
     @InjectRepository(InstallationEntity)
     private readonly installationRepository: Repository<InstallationEntity>,
+    private readonly userCarbonMetricsService: UserCarbonMetricsService,
   ) {}
   async getUserDashboard(userId: number): Promise<DashboardResponseDto> {
-    const installations = await this.installationRepository.find({
-      where: { userId },
-      select: ['id'],
-    });
-    const installationIds = installations.map((inst) => inst.id);
-    const totalEnergyResult = await this.energyReadingRepository
-      .createQueryBuilder('er')
-      .select('COALESCE(SUM(er.verified_kwh), 0)', 'total')
-      .where('er.installation_id IN (:...ids)', { ids: installationIds.length > 0 ? installationIds : [-1] })
-      .andWhere('er.verified = :verified', { verified: true })
+    const totalEnergyResult = await this.rewardTransactionRepository
+      .createQueryBuilder('rt')
+      .select('COALESCE(SUM(rt.kwh_rewarded), 0)', 'total')
+      .where('rt.user_id = :userId', { userId })
+      .andWhere('rt.reason = :reason', {
+        reason: RewardReason.VENDOR_MONTHLY_USAGE,
+      })
       .getRawOne();
     const totalEnergyGenerated = parseFloat(totalEnergyResult?.total || '0');
     const walletBalance = await this.walletBalanceRepository.findOne({
@@ -54,24 +53,26 @@ export class DashboardService {
     const activePredictions = await this.predictionRepository.count({
       where: { userId, status: PredictionStatus.LOCKED },
     });
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const energyReadings = await this.energyReadingRepository
-      .createQueryBuilder('er')
-      .select('er.timestamp', 'timestamp')
-      .addSelect('er.verified_kwh', 'kwh')
-      .where('er.installation_id IN (:...ids)', { ids: installationIds.length > 0 ? installationIds : [-1] })
-      .andWhere('er.verified = :verified', { verified: true })
-      .andWhere('er.timestamp >= :sixMonthsAgo', { sixMonthsAgo })
-      .getMany();
-    const monthlyData = new Map<string, number>();
-    energyReadings.forEach((er) => {
-      const date = new Date(er.timestamp);
-      const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const current = monthlyData.get(monthStr) || 0;
-      const energy = er.verifiedKwh ? parseFloat(er.verifiedKwh.toString()) : 0;
-      monthlyData.set(monthStr, current + energy);
+    const monthlyRewardRows = await this.rewardTransactionRepository
+      .createQueryBuilder('rt')
+      .select('rt.usage_period_year_month', 'month')
+      .addSelect('COALESCE(SUM(rt.kwh_rewarded), 0)', 'kwh')
+      .where('rt.user_id = :userId', { userId })
+      .andWhere('rt.reason = :reason', { reason: RewardReason.VENDOR_MONTHLY_USAGE })
+      .andWhere('rt.usage_period_year_month IS NOT NULL')
+      .groupBy('rt.usage_period_year_month')
+      .getRawMany<{ month: string; kwh: string }>();
+
+    const monthlyKwhByRewardPeriod = new Map<string, number>();
+    monthlyRewardRows.forEach((row) => {
+      const safeMonth = typeof row.month === 'string' ? row.month : '';
+      const safeKwh = Number.isFinite(parseFloat(row.kwh)) ? parseFloat(row.kwh) : 0;
+      if (!safeMonth) {
+        return;
+      }
+      monthlyKwhByRewardPeriod.set(safeMonth, Math.max(safeKwh, 0));
     });
+
     const energyTrend: { month: string; energy: number }[] = [];
     const currentDate = new Date();
     for (let i = 5; i >= 0; i--) {
@@ -80,9 +81,18 @@ export class DashboardService {
       const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       energyTrend.push({
         month: monthStr,
-        energy: monthlyData.get(monthStr) || 0,
+        energy: monthlyKwhByRewardPeriod.get(monthStr) || 0,
       });
     }
+    const carbonReductionTrend = this.userCarbonMetricsService.calculateMonthlyCarbonTrend(
+      energyTrend.map((item) => ({
+        month: item.month,
+        kwh: item.energy,
+      })),
+    );
+    const monthlyCarbonReducedKg =
+      this.userCarbonMetricsService.getCurrentMonthCarbonReducedKg(carbonReductionTrend);
+    const totalCarbonReducedKg = this.userCarbonMetricsService.getTotalCarbonReducedKg(carbonReductionTrend);
     const rewardsByCategory = await this.rewardTransactionRepository
       .createQueryBuilder('rt')
       .select('rt.reason', 'category')
@@ -141,7 +151,10 @@ export class DashboardService {
       tokensAvailable,
       activePredictions,
       certificatesEarned,
+      monthlyCarbonReducedKg,
+      totalCarbonReducedKg,
       energyGenerationTrend: energyTrend,
+      carbonReductionTrend,
       rewardsDistribution,
       recentActivity,
     };

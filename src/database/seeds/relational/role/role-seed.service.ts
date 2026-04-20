@@ -23,7 +23,7 @@ export class RoleSeedService {
         }),
       );
     }
-    const countAdmin = await this.repository.count({
+   const countAdmin = await this.repository.count({ 
       where: {
         id: RoleEnum.admin,
       },
@@ -33,6 +33,20 @@ export class RoleSeedService {
         this.repository.create({
           id: RoleEnum.admin,
           name: 'Admin',
+        }),
+      );
+    }
+
+    const countVendor= await this.repository.count({ 
+      where: {
+        id: RoleEnum.vendor,
+      },
+    });
+    if (!countVendor) {
+      await this.repository.save(
+        this.repository.create({
+          id: RoleEnum.vendor,
+          name: 'Vendor',
         }),
       );
     }

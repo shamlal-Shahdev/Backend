@@ -6,7 +6,7 @@ import { UserService } from '../../user/user.service';
 import { EmailService } from '../../email/email.service';
 import { VendorRegisterDto } from './dto/vendor-register.dto';
 import { VendorLoginDto } from './dto/vendor-login.dto';
-import { UserEntity, UserRole } from '../../user/entity/user.entity';
+import { UserRole } from '../../user/entity/user.entity';
 import { JwtPayloadType } from '../../auth/strategies/types/jwt-payload.type';
 import { AllConfigType } from '../../config/config.type';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
@@ -18,6 +18,9 @@ import {
   UserNotFoundException,
 } from '../../auth/exceptions/auth.exceptions';
 import { CreateUserDto } from '../../user/dto/create-user.dto';
+import { VendorCompanyProfileService } from '../company-profile/vendor-company-profile.service';
+import { LoginResponseDto } from '../../auth/dto/login-response.dto';
+
 @Injectable()
 export class VendorAuthService {
   private readonly logger = new Logger(VendorAuthService.name);
@@ -26,18 +29,19 @@ export class VendorAuthService {
     private usersService: UserService,
     private emailService: EmailService,
     private configService: ConfigService<AllConfigType>,
+    private vendorCompanyProfileService: VendorCompanyProfileService,
   ) {}
   async register(vendorRegisterDto: VendorRegisterDto): Promise<void> {
     try {
       this.logger.log(
-        `🔐 Vendor registration attempt for email: ${vendorRegisterDto.email}`,
+        `Vendor registration attempt for email: ${vendorRegisterDto.email}`,
       );
       const existingUser = await this.usersService.findByEmail(
         vendorRegisterDto.email,
       );
       if (existingUser) {
         this.logger.warn(
-          `❌ Vendor registration attempt with existing email: ${vendorRegisterDto.email}`,
+          ` Vendor registration attempt with existing email: ${vendorRegisterDto.email}`,
         );
         throw new UserExistsException();
       }
@@ -54,13 +58,10 @@ export class VendorAuthService {
             : vendorRegisterDto.email.split('@')[0],
         email: vendorRegisterDto.email,
         passwordHash: hashedPassword,
-        walletAddress: `0x${Math.random().toString(16).substr(2, 40)}`,
         isVerified: false,
         verificationToken,
         resetToken: null,
-        kycStatus: 'not_submitted',
         phone: vendorRegisterDto.phone,
-        companyName: vendorRegisterDto.companyName,
         role: UserRole.VENDOR,
       } as CreateUserDto);
       this.logger.log(`✅ Vendor created successfully: ${user.email}`);
@@ -74,9 +75,7 @@ export class VendorAuthService {
       throw error;
     }
   }
-  async login(
-    vendorLoginDto: VendorLoginDto,
-  ): Promise<{ token: string; user: UserEntity }> {
+  async login(vendorLoginDto: VendorLoginDto): Promise<LoginResponseDto> {
     try {
       this.logger.log(
         `🔐 Vendor login attempt for email: ${vendorLoginDto.email}`,
@@ -133,9 +132,25 @@ export class VendorAuthService {
       this.logger.log(
         `✅ Vendor login successful for: ${vendorLoginDto.email}`,
       );
+      const profile = await this.vendorCompanyProfileService.findByUserId(
+        user.id,
+      );
+      const companyProfileComplete =
+        await this.vendorCompanyProfileService.isComplete(user.id);
       return {
         token,
-        user,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone,
+          role: user.role,
+          isVerified: user.isVerified,
+          companyName: profile?.companyName ?? null,
+          companyProfileComplete,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
       };
     } catch (error) {
       this.logger.error('Error during vendor login:', error);
@@ -144,7 +159,7 @@ export class VendorAuthService {
   }
   async forgotPassword(email: string): Promise<void> {
     try {
-      this.logger.log(`🔐 Vendor forgot password request for email: ${email}`);
+      this.logger.log(`Vendor forgot password request for email: ${email}`);
       const user = await this.usersService.findByEmail(email);
       if (!user) {
         this.logger.warn(

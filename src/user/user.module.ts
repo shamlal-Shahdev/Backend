@@ -11,6 +11,7 @@ import { CertificateEntity } from '../certificate/entity/certificate.entity';
 import { RewardTransactionEntity } from '../reward-transaction/entity/reward-transaction.entity';
 import { PredictionEntity } from '../prediction/entity/prediction.entity';
 import { InstallationEntity } from '../installation/entity/installation.entity';
+import { UserCarbonMetricsService } from './user-carbon-metrics.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -25,7 +26,7 @@ import { InstallationEntity } from '../installation/entity/installation.entity';
     ]),
   ],
   controllers: [UserController],
-  providers: [UserService, DashboardService],
-  exports: [UserService, DashboardService],
+  providers: [UserService, DashboardService, UserCarbonMetricsService],
+  exports: [UserService, DashboardService, UserCarbonMetricsService],
 })
 export class UserModule {}

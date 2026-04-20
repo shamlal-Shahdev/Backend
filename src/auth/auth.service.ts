@@ -25,15 +25,61 @@ import {
   UserNotFoundException,
 } from './exceptions/auth.exceptions';
 import { CreateUserDto } from '../user/dto/create-user.dto';
+import { KycService } from '../kyc/kyc.service';
+import { UserWalletService } from '../user-wallet/user-wallet.service';
+import { AuthUserResponseDto } from './dto/auth-user-response.dto';
+import { VendorCompanyProfileService } from '../vendor/company-profile/vendor-company-profile.service';
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private jwtService: JwtService,
     private usersService: UserService,
     private emailService: EmailService,
     private configService: ConfigService<AllConfigType>,
+    private kycService: KycService,
+    private userWalletService: UserWalletService,
+    private vendorCompanyProfileService: VendorCompanyProfileService,
   ) {}
+
+  private async toAuthUserResponse(user: User): Promise<AuthUserResponseDto> {
+    if (user.role === UserRole.VENDOR) {
+      const p = await this.vendorCompanyProfileService.findByUserId(user.id);
+      const companyProfileComplete =
+        await this.vendorCompanyProfileService.isComplete(user.id);
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        isVerified: user.isVerified,
+        companyName: p?.companyName ?? null,
+        companyProfileComplete,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+    }
+    const kyc = await this.kycService.getUserKycStatus(user.id);
+    const walletAddress =
+      user.userWallet?.address ??
+      (await this.userWalletService.getWalletAddressForUser(user.id));
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      isVerified: user.isVerified,
+      walletAddress: walletAddress ?? null,
+      kycStatus: kyc.status,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
   async register(registerDto: RegisterDto): Promise<void> {
     try {
       const existingUser = await this.usersService.findByEmail(
@@ -48,73 +94,63 @@ export class AuthService {
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(registerDto.password, salt);
       const verificationToken = randomStringGenerator();
-      const user = await this.usersService.create({
+      await this.usersService.create({
         name:
           registerDto.firstName && registerDto.lastName
             ? `${registerDto.firstName} ${registerDto.lastName}`
             : registerDto.email.split('@')[0],
         email: registerDto.email,
         passwordHash: hashedPassword,
-        walletAddress: `0x${Math.random().toString(16).substr(2, 40)}`, 
         isVerified: false,
         verificationToken,
         resetToken: null,
-        kycStatus: 'not_submitted',
         phone: registerDto.phone,
         role: UserRole.USER,
       } as CreateUserDto);
-      this.logger.log(`User created successfully: ${user.email}`);
+      this.logger.log(`User created successfully: ${registerDto.email}`);
       await this.emailService.sendVerificationEmail(
         registerDto.email,
         verificationToken,
       );
-      this.logger.log(`Verification email sent to: ${user.email}`);
+      this.logger.log(`Verification email sent to: ${registerDto.email}`);
     } catch (error) {
       this.logger.error('Error during user registration:', error);
       throw error;
     }
   }
-  async login(loginDto: LoginDto): Promise<{ token: string; user: any }> {
+
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ token: string; user: AuthUserResponseDto }> {
     try {
       const normalizedEmail = loginDto.email?.toLowerCase().trim();
       if (!normalizedEmail) {
-        this.logger.error('❌ Login attempt with empty email');
+        this.logger.error('Login attempt with empty email');
         throw new UserNotFoundException(
           'Email is required. Please provide a valid email address.',
         );
       }
-      this.logger.log(`🔐 Login attempt for email: ${normalizedEmail}`);
+      this.logger.log(`Login attempt for email: ${normalizedEmail}`);
       const user = await this.usersService.findByEmail(normalizedEmail);
       if (!user || !user.id) {
         this.logger.warn(
-          `❌ Login attempt with non-existent email: ${normalizedEmail}`,
+          `Login attempt with non-existent email: ${normalizedEmail}`,
         );
-        this.logger.warn(
-          `📊 User lookup returned: ${user === null ? 'null' : 'undefined or invalid user object'}`,
-        );
-        const error = new UserNotFoundException(
+        throw new UserNotFoundException(
           'This email is not registered. Please register first to create an account.',
         );
-        this.logger.error(
-          `🚫 Throwing UserNotFoundException with status: ${error.getStatus()}`,
-        );
-        this.logger.error(
-          `🚫 Exception response:`,
-          JSON.stringify(error.getResponse(), null, 2),
-        );
-        throw error;
       }
       this.logger.log(
-        `📧 User found - ID: ${user.id}, Email: ${user.email}, Verified: ${user.isVerified}`,
+        `User found - ID: ${user.id}, Email: ${user.email}, Verified: ${user.isVerified}`,
       );
       if (!user.isVerified) {
         this.logger.warn(
-          `⚠️ Login attempt with unverified email: ${normalizedEmail}`,
+          `Login attempt with unverified email: ${normalizedEmail}`,
         );
         throw new UnverifiedUserException();
       }
       if (!user.passwordHash) {
-        this.logger.error(`🔒 User ${user.id} has no password set`);
+        this.logger.error(`User ${user.id} has no password set`);
         throw new InvalidCredentialsException();
       }
       const isPasswordValid = await bcrypt.compare(
@@ -123,13 +159,13 @@ export class AuthService {
       );
       if (!isPasswordValid) {
         this.logger.warn(
-          `🔒 Invalid password attempt for user: ${normalizedEmail}`,
+          `Invalid password attempt for user: ${normalizedEmail}`,
         );
         throw new InvalidCredentialsException();
       }
       if (user.role === UserRole.ADMIN) {
         this.logger.warn(
-          `🚫 Admin login attempt through user endpoint: ${normalizedEmail}`,
+          `Admin login attempt through user endpoint: ${normalizedEmail}`,
         );
         throw new ForbiddenException(
           'Admin users must use the admin login endpoint. Please use the admin login page.',
@@ -138,39 +174,21 @@ export class AuthService {
       const payload: JwtPayloadType = { id: user.id, email: user.email };
       const token = await this.generateToken(payload);
       this.logger.log(
-        `✅ User logged in successfully: ${user.email} (ID: ${user.id})`,
+        `User logged in successfully: ${user.email} (ID: ${user.id})`,
       );
-      const userResponse = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        walletAddress: user.walletAddress,
-        phone: user.phone,
-        companyName: user.companyName,
-        role: user.role,
-        isVerified: user.isVerified,
-        kycStatus: user.kycStatus,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      };
-      return { token, user: userResponse }; 
+      const userResponse = await this.toAuthUserResponse(user);
+      return { token, user: userResponse };
     } catch (error) {
-      this.logger.error('❌ Error during login:', error);
-      this.logger.error(`❌ Error type: ${error?.constructor?.name}`);
-      this.logger.error(`❌ Error message: ${error?.message}`);
+      this.logger.error('Error during login:', error);
       if (error instanceof HttpException) {
-        this.logger.error(`📤 Exception status: ${error.getStatus()}`);
-        this.logger.error(
-          `📤 Exception response:`,
-          JSON.stringify(error.getResponse(), null, 2),
-        );
+        this.logger.error(`Exception status: ${error.getStatus()}`);
       }
       throw error;
     }
   }
+
   async verifyEmail(token: string): Promise<{ role: string }> {
     try {
-      console.log('Verification Token:', token);
       const user = await this.usersService.findByVerificationToken(token);
       if (!user) {
         this.logger.warn(`Invalid verification token attempt: ${token}`);
@@ -187,6 +205,7 @@ export class AuthService {
       throw error;
     }
   }
+
   async forgotPassword(email: string): Promise<void> {
     try {
       const user = await this.usersService.findByEmail(email);
@@ -207,6 +226,7 @@ export class AuthService {
       throw error;
     }
   }
+
   async resetPassword(token: string, newPassword: string): Promise<void> {
     try {
       const user = await this.usersService.findByResetToken(token);
@@ -218,7 +238,7 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, salt);
       await this.usersService.update(user.id, {
         passwordHash: hashedPassword,
-        password: hashedPassword, 
+        password: hashedPassword,
         resetToken: null,
       } as any);
       this.logger.log(`Password reset successfully for user: ${user.email}`);
@@ -227,6 +247,7 @@ export class AuthService {
       throw error;
     }
   }
+
   async resendVerificationEmail(email: string): Promise<void> {
     try {
       const normalizedEmail = email?.toLowerCase().trim();
@@ -239,7 +260,9 @@ export class AuthService {
         this.logger.warn(
           `Resend verification attempt for non-existent email: ${normalizedEmail}`,
         );
-        throw new UserNotFoundException('User not found with this email address.');
+        throw new UserNotFoundException(
+          'User not found with this email address.',
+        );
       }
       if (user.isVerified) {
         this.logger.warn(
@@ -267,7 +290,8 @@ export class AuthService {
       throw error;
     }
   }
-  async me(userJwtPayload: JwtPayloadType): Promise<User> {
+
+  async me(userJwtPayload: JwtPayloadType): Promise<AuthUserResponseDto> {
     try {
       const userId =
         typeof userJwtPayload.id === 'string'
@@ -278,20 +302,18 @@ export class AuthService {
         this.logger.warn(`User not found for ID: ${userJwtPayload.id}`);
         throw new UserNotFoundException();
       }
-      this.logger.log(`📧 User profile fetched:`, {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-        hasPhone: !!user.phone,
-      });
-      return user;
+      this.logger.log(`User profile fetched: id=${user.id} email=${user.email}`);
+      return this.toAuthUserResponse(user);
     } catch (error) {
       this.logger.error('Error fetching user profile:', error);
       throw error;
     }
   }
-  async updateMe(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
+
+  async updateMe(
+    userId: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<AuthUserResponseDto> {
     try {
       const userIdNum = parseInt(userId, 10);
       if (isNaN(userIdNum)) {
@@ -305,13 +327,18 @@ export class AuthService {
         this.logger.warn(`User not found for update: ${userId}`);
         throw new UserNotFoundException();
       }
+      const reloaded = await this.usersService.findById(userIdNum);
+      if (!reloaded) {
+        throw new UserNotFoundException();
+      }
       this.logger.log(`User profile updated successfully: ${userId}`);
-      return updatedUser;
+      return this.toAuthUserResponse(reloaded);
     } catch (error) {
       this.logger.error('Error updating user profile:', error);
       throw error;
     }
   }
+
   private async generateToken(payload: JwtPayloadType): Promise<string> {
     try {
       return await this.jwtService.signAsync(payload, {

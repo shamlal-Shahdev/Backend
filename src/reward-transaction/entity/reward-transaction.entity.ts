@@ -12,9 +12,12 @@ import { UserEntity } from '../../user/entity/user.entity';
 import { InstallationEntity } from '../../installation/entity/installation.entity';
 import { OracleEntity } from '../../oracle/entity/oracle.entity';
 import { TokenMintEventEntity } from '../../token-mint-event/entity/token-mint-event.entity';
+import { VendorUsageImportBatchEntity } from '../../vendor/usage-import/entity/vendor-usage-import-batch.entity';
 export enum RewardReason {
   DAILY_REWARD = 'daily_reward',
   PREDICTION_BONUS = 'prediction_bonus',
+  /** kWh for calendar month from vendor CSV/Excel import (see usage_period_year_month). */
+  VENDOR_MONTHLY_USAGE = 'vendor_monthly_usage',
 }
 @Entity({ name: 'reward_transaction' })
 export class RewardTransactionEntity extends EntityRelationalHelper {
@@ -39,6 +42,15 @@ export class RewardTransactionEntity extends EntityRelationalHelper {
   reason: RewardReason;
   @Column({ name: 'oracle_id', type: 'int', nullable: true })
   oracleId: number | null;
+  @Column({ name: 'vendor_usage_batch_id', type: 'int', nullable: true })
+  vendorUsageBatchId: number | null;
+  @Column({
+    name: 'usage_period_year_month',
+    type: 'varchar',
+    length: 7,
+    nullable: true,
+  })
+  usagePeriodYearMonth: string | null;
   @CreateDateColumn({ name: 'issued_at' })
   issuedAt: Date;
   @ManyToOne(() => UserEntity, (user) => user.rewardTransactions, {
@@ -58,6 +70,12 @@ export class RewardTransactionEntity extends EntityRelationalHelper {
   })
   @JoinColumn({ name: 'oracle_id' })
   oracle: OracleEntity | null;
+  @ManyToOne(() => VendorUsageImportBatchEntity, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'vendor_usage_batch_id' })
+  vendorUsageBatch: VendorUsageImportBatchEntity | null;
   @OneToOne(
     () => TokenMintEventEntity,
     (tokenMintEvent) => tokenMintEvent.rewardTransaction,

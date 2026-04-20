@@ -12,6 +12,7 @@ import { RewardTransactionEntity } from '../../reward-transaction/entity/reward-
 export class TokenMintEventEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
   id: number;
+  @Column({ name: 'reward_transaction_id', type: 'int' })
   rewardTransactionId: number;
   @Column({ name: 'tx_hash', type: 'varchar', length: 255 })
   txHash: string;

@@ -1,31 +1,38 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
-import { Transform } from 'class-transformer';
-import { lowerCaseTransformer } from '../../../utils/transformers/lower-case.transformer';
+import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+
 export class VendorRegisterDto {
-  @ApiProperty({ example: 'John', type: String })
-  @IsNotEmpty()
+  @ApiProperty({ example: 'John' })
   @IsString()
+  @MinLength(1)
+  @MaxLength(100)
   firstName: string;
-  @ApiProperty({ example: 'Doe', type: String })
-  @IsNotEmpty()
+
+  @ApiProperty({ example: 'Doe' })
   @IsString()
+  @MinLength(1)
+  @MaxLength(100)
   lastName: string;
-  @ApiProperty({ example: 'vendor@example.com', type: String })
-  @Transform(lowerCaseTransformer)
+
+  @ApiProperty({ example: 'vendor@example.com' })
   @IsEmail()
-  @IsNotEmpty()
   email: string;
-  @ApiProperty({ example: '+92 300 1234567', type: String })
-  @IsNotEmpty()
+
+  @ApiProperty({ example: 'password123', minLength: 8 })
   @IsString()
-  phone: string;
-  @ApiProperty({ example: 'Solar Energy Solutions', type: String })
-  @IsNotEmpty()
-  @IsString()
-  companyName: string;
-  @ApiProperty({ example: 'password123', type: String })
-  @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
+  @MaxLength(128)
   password: string;
+
+  @ApiProperty({
+    example: '+923001234567',
+    description:
+      'Pakistan mobile: +92 followed by 10 digits, or 10-digit local number only',
+  })
+  @IsString()
+  @Matches(/^(\+92\d{10}|\d{10})$/, {
+    message:
+      'Phone must be 10 digits (local) or +92 followed by exactly 10 digits',
+  })
+  phone: string;
 }

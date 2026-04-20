@@ -18,9 +18,12 @@ import { RejectEnergyRequestDto } from '../../energy-request/dto/reject-energy-r
 import { EmailService } from '../../email/email.service';
 import { TokenService } from '../../blockchain/token.service';
 import { WalletBalanceService } from '../../wallet-balance/wallet-balance.service';
+import { UserWalletService } from '../../user-wallet/user-wallet.service';
+
 @Injectable()
 export class AdminEnergyRequestService {
   private readonly logger = new Logger(AdminEnergyRequestService.name);
+
   constructor(
     @InjectRepository(EnergyRequestEntity)
     private readonly energyRequestRepository: Repository<EnergyRequestEntity>,
@@ -29,47 +32,44 @@ export class AdminEnergyRequestService {
     private readonly emailService: EmailService,
     private readonly tokenService: TokenService,
     private readonly walletBalanceService: WalletBalanceService,
+    private readonly userWalletService: UserWalletService,
   ) {}
+
+  async getAllEnergyRequests(
+    status?: EnergyRequestStatus,
+  ): Promise<{ requests: EnergyRequestEntity[]; total: number }> {
+    const where = status ? { status } : {};
+    const [requests, total] = await this.energyRequestRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['user'],
+    });
+    return { requests, total };
+  }
+
   async getPendingEnergyRequests(): Promise<{
     requests: EnergyRequestEntity[];
     total: number;
   }> {
-    const requests = await this.energyRequestRepository.find({
+    const [requests, total] = await this.energyRequestRepository.findAndCount({
       where: { status: EnergyRequestStatus.PENDING },
-      relations: ['user'],
-      order: { createdAt: 'ASC' },
-    });
-    this.logger.log(`Retrieved ${requests.length} pending energy requests`);
-    return {
-      requests,
-      total: requests.length,
-    };
-  }
-  async getAllEnergyRequests(status?: EnergyRequestStatus): Promise<{
-    requests: EnergyRequestEntity[];
-    total: number;
-  }> {
-    const where = status ? { status } : {};
-    const requests = await this.energyRequestRepository.find({
-      where,
-      relations: ['user', 'approvedByAdmin'],
       order: { createdAt: 'DESC' },
+      relations: ['user'],
     });
-    return {
-      requests,
-      total: requests.length,
-    };
+    return { requests, total };
   }
+
   async getEnergyRequestById(id: number): Promise<EnergyRequestEntity> {
     const request = await this.energyRequestRepository.findOne({
       where: { id },
-      relations: ['user', 'approvedByAdmin'],
+      relations: ['user'],
     });
     if (!request) {
-      throw new NotFoundException(`Energy request with ID ${id} not found`);
+      throw new NotFoundException(`Energy request ${id} not found`);
     }
     return request;
   }
+
   private verifyMeterCrosscheck(request: EnergyRequestEntity): boolean {
     if (request.kycMeterCrosscheck === KycMeterCrosscheck.MISMATCH) {
       this.logger.warn(
@@ -85,13 +85,16 @@ export class AdminEnergyRequestService {
     }
     return true;
   }
-  private async verifyWalletAddress(user: UserEntity): Promise<boolean> {
-    if (!user.walletAddress || user.walletAddress.trim().length === 0) {
+
+  private async verifyWalletAddressForUser(userId: number): Promise<boolean> {
+    const addr = await this.userWalletService.getWalletAddressForUser(userId);
+    if (!addr || addr.trim().length === 0) {
       return false;
     }
     const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
-    return ethAddressRegex.test(user.walletAddress);
+    return ethAddressRegex.test(addr);
   }
+
   async approveEnergyRequest(
     requestId: number,
     adminId: number,
@@ -111,7 +114,9 @@ export class AdminEnergyRequestService {
       throw new NotFoundException(`User ${request.userId} not found`);
     }
     if (request.userId === adminId) {
-      throw new ForbiddenException('Cannot approve your own energy request. Please ask another admin to review it.');
+      throw new ForbiddenException(
+        'Cannot approve your own energy request. Please ask another admin to review it.',
+      );
     }
     const meterOk = this.verifyMeterCrosscheck(request);
     if (!meterOk) {
@@ -119,14 +124,17 @@ export class AdminEnergyRequestService {
         `Meter verification flags for request ${requestId} require admin attention before relying on automated checks.`,
       );
     }
-    const walletValid = await this.verifyWalletAddress(user);
+    const walletValid = await this.verifyWalletAddressForUser(request.userId);
     if (!walletValid) {
       throw new BadRequestException(
-        `User ${request.userId} does not have a valid wallet address. Please update the wallet address before approving.`,
+        `User ${request.userId} does not have a valid wallet address. Ensure KYC is approved so a wallet exists.`,
       );
     }
-    const rewardAmount = dto.rewardAmount || 100; 
-    const blockchainResult = await this.triggerBlockchainReward(user, rewardAmount);
+    const rewardAmount = dto.rewardAmount || 100;
+    const blockchainResult = await this.triggerBlockchainReward(
+      request.userId,
+      rewardAmount,
+    );
     if (blockchainResult.success && blockchainResult.txHash) {
       request.status = EnergyRequestStatus.REWARD_GENERATED;
       request.blockchainTxHash = blockchainResult.txHash;
@@ -157,7 +165,10 @@ export class AdminEnergyRequestService {
     }
     request.approvedByAdminId = adminId;
     if (dto.remark) {
-      request.adminRemark = (request.adminRemark || '') + (request.adminRemark ? ' | ' : '') + dto.remark;
+      request.adminRemark =
+        (request.adminRemark || '') +
+        (request.adminRemark ? ' | ' : '') +
+        dto.remark;
     }
     const savedRequest = await this.energyRequestRepository.save(request);
     try {
@@ -179,7 +190,9 @@ export class AdminEnergyRequestService {
           request.year,
           dto.remark,
         );
-        this.logger.log(`Approval email sent to ${user.email} (blockchain pending)`);
+        this.logger.log(
+          `Approval email sent to ${user.email} (blockchain pending)`,
+        );
       }
     } catch (error) {
       this.logger.error(
@@ -189,6 +202,7 @@ export class AdminEnergyRequestService {
     }
     return savedRequest;
   }
+
   async rejectEnergyRequest(
     requestId: number,
     adminId: number,
@@ -228,36 +242,43 @@ export class AdminEnergyRequestService {
     }
     return savedRequest;
   }
-    private async triggerBlockchainReward(
-      user: UserEntity,
-      rewardAmount: number,
-    ): Promise<{ success: boolean; txHash: string | null; error: string | null }> {
-      try {
-        this.logger.log(
-          `Triggering blockchain reward for user ${user.id}: ${rewardAmount} tokens to ${user.walletAddress}`,
-        );
-        const { txHash } = await this.tokenService.mintTo(
-          user.walletAddress,
-          rewardAmount,
-        );
-        this.logger.log(`Blockchain transaction successful: ${txHash}`);
-        return {
-          success: true,
-          txHash,
-          error: null,
-        };
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unknown blockchain error';
-        this.logger.error(
-          `Blockchain error for user ${user.id}: ${message}`,
-          error,
-        );
+
+  private async triggerBlockchainReward(
+    userId: number,
+    rewardAmount: number,
+  ): Promise<{ success: boolean; txHash: string | null; error: string | null }> {
+    try {
+      const walletAddress =
+        await this.userWalletService.getWalletAddressForUser(userId);
+      if (!walletAddress) {
         return {
           success: false,
           txHash: null,
-          error: message,
+          error: 'No wallet address for user',
         };
       }
+      this.logger.log(
+        `Triggering blockchain reward for user ${userId}: ${rewardAmount} tokens to ${walletAddress}`,
+      );
+      const { txHash } = await this.tokenService.mintTo(
+        walletAddress,
+        rewardAmount,
+      );
+      this.logger.log(`Blockchain transaction successful: ${txHash}`);
+      return {
+        success: true,
+        txHash,
+        error: null,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown blockchain error';
+      this.logger.error(`Blockchain error for user ${userId}: ${message}`, error);
+      return {
+        success: false,
+        txHash: null,
+        error: message,
+      };
     }
+  }
 }

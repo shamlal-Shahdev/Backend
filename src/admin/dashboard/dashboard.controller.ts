@@ -6,13 +6,14 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { AdminGuard } from '../../auth/guards/admin.guard';
 import { AdminDashboardService } from './dashboard.service';
 @ApiTags('Admin - Dashboard')
 @Controller({
   path: 'admin/dashboard',
   version: '1',
 })
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), AdminGuard)
 @ApiBearerAuth()
 export class AdminDashboardController {
   constructor(private readonly adminDashboardService: AdminDashboardService) {}

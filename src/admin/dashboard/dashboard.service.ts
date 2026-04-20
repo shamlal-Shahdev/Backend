@@ -1,12 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserEntity, KycStatus, UserRole } from '../../user/entity/user.entity';
-import { InstallationEntity, InstallationStatus } from '../../installation/entity/installation.entity';
-import { EnergyRequestEntity, EnergyRequestStatus } from '../../energy-request/entity/energy-request.entity';
+import { UserEntity, UserRole } from '../../user/entity/user.entity';
+import {
+  InstallationEntity,
+  InstallationStatus,
+} from '../../installation/entity/installation.entity';
+import {
+  EnergyRequestEntity,
+  EnergyRequestStatus,
+} from '../../energy-request/entity/energy-request.entity';
+import { KycSubmissionStatus } from '../../kyc/kyc-submission-status.enum';
+
 @Injectable()
 export class AdminDashboardService {
   private readonly logger = new Logger(AdminDashboardService.name);
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -15,19 +24,40 @@ export class AdminDashboardService {
     @InjectRepository(EnergyRequestEntity)
     private readonly energyRequestRepository: Repository<EnergyRequestEntity>,
   ) {}
+
+  private async countUsersWithLatestKycStatus(
+    status: KycSubmissionStatus,
+  ): Promise<number> {
+    const raw = await this.userRepository
+      .createQueryBuilder('u')
+      .select('COUNT(u.id)', 'cnt')
+      .where('u.role = :role', { role: UserRole.USER })
+      .andWhere(
+        `(
+          SELECT k.status FROM kyc k
+          WHERE k.user_id = u.id
+          ORDER BY (k.submitted_at IS NULL), k.submitted_at DESC
+          LIMIT 1
+        ) = :status`,
+        { status },
+      )
+      .getRawOne();
+    return parseInt(String(raw?.cnt ?? '0'), 10);
+  }
+
   async getDashboardStats() {
-    const pendingKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.PENDING, role: UserRole.USER },
-    });
-    const approvedKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.APPROVED, role: UserRole.USER },
-    });
-    const rejectedKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.REJECTED, role: UserRole.USER },
-    });
-    const inReviewKyc = await this.userRepository.count({
-      where: { kycStatus: KycStatus.IN_REVIEW, role: UserRole.USER },
-    });
+    const pendingKyc = await this.countUsersWithLatestKycStatus(
+      KycSubmissionStatus.PENDING,
+    );
+    const approvedKyc = await this.countUsersWithLatestKycStatus(
+      KycSubmissionStatus.APPROVED,
+    );
+    const rejectedKyc = await this.countUsersWithLatestKycStatus(
+      KycSubmissionStatus.REJECTED,
+    );
+    const inReviewKyc = await this.countUsersWithLatestKycStatus(
+      KycSubmissionStatus.IN_REVIEW,
+    );
     const submittedInstallations = await this.installationRepository.count({
       where: { status: InstallationStatus.SUBMITTED },
     });

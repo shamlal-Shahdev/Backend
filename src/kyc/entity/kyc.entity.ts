@@ -8,6 +8,8 @@ import {
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../utils/relational-entity-helper';
 import { UserEntity } from '../../user/entity/user.entity';
+import { KycSubmissionStatus } from '../kyc-submission-status.enum';
+
 @Entity({ name: 'kyc' })
 export class KycEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
@@ -41,6 +43,17 @@ export class KycEntity extends EntityRelationalHelper {
   submittedAt: Date;
   @Column({ name: 'reviewed_at', type: 'datetime', nullable: true })
   reviewedAt: Date | null;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    default: KycSubmissionStatus.NOT_SUBMITTED,
+  })
+  status: KycSubmissionStatus;
+
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason: string | null;
+
   @ManyToOne(() => UserEntity, (user) => user.kycDocuments, {
     onDelete: 'CASCADE',
   })

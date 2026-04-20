@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Request,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -29,6 +30,7 @@ import { RewardTransactionService } from './reward-transaction.service';
 import { CreateRewardTransactionDto } from './dto/create-reward-transaction.dto';
 import { UpdateRewardTransactionDto } from './dto/update-reward-transaction.dto';
 import { RewardTransactionEntity } from './entity/reward-transaction.entity';
+import { UserRole } from '../user/entity/user.entity';
 @ApiTags('Reward Transactions')
 @Controller({
   path: 'reward-transactions',
@@ -65,10 +67,18 @@ export class RewardTransactionController {
   })
   @Roles(RoleEnum.admin, RoleEnum.user)
   findAll(
+    @Request() req: { user: { id: number | string; role: string } },
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    return this.rewardTransactionService.findAll(page, limit);
+    const isAdmin = req.user.role === UserRole.ADMIN;
+    const uid =
+      typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
+    return this.rewardTransactionService.findAll(
+      page,
+      limit,
+      isAdmin ? undefined : uid,
+    );
   }
   @Get(':id')
   @ApiOperation({ summary: 'Get a reward transaction by ID' })
