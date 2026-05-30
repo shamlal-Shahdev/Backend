@@ -23,6 +23,7 @@ import { TokenMintEventEntity } from '../../token-mint-event/entity/token-mint-e
 import { WalletBalanceEntity } from '../../wallet-balance/entity/wallet-balance.entity';
 import { TokenService } from '../../blockchain/token.service';
 import { UserWalletService } from '../../user-wallet/user-wallet.service';
+import { CertificateGenerationService } from '../../certificate/certificate-generation.service';
 import { VendorUsageImportParserService } from './vendor-usage-import-parser.service';
 import {
   VendorUsageImportBatchEntity,
@@ -32,6 +33,11 @@ import {
   VendorUsageImportRowEntity,
   VendorUsageImportRowStatus,
 } from './entity/vendor-usage-import-row.entity';
+
+type PendingCertificateJob = {
+  rewardTransactionId: number;
+  installationId: number;
+};
 
 @Injectable()
 export class VendorUsageImportService {
@@ -50,6 +56,7 @@ export class VendorUsageImportService {
     private readonly configService: ConfigService<AllConfigType>,
     private readonly tokenService: TokenService,
     private readonly userWalletService: UserWalletService,
+    private readonly certificateGenerationService: CertificateGenerationService,
   ) {}
 
   getTokensPerKwh(): number {
@@ -240,6 +247,7 @@ export class VendorUsageImportService {
       let acceptedSkipped = 0;
       let rejected = 0;
       let mintFailed = 0;
+      const pendingCertificates: PendingCertificateJob[] = [];
 
       for (const row of rows) {
         if (row.status === VendorUsageImportRowStatus.REJECTED) {
@@ -370,6 +378,10 @@ export class VendorUsageImportService {
 
         row.rewardTransactionId = savedReward.id;
         await queryRunner.manager.save(row);
+        pendingCertificates.push({
+          rewardTransactionId: savedReward.id,
+          installationId: installation.id,
+        });
         acceptedCredited++;
       }
 
@@ -389,6 +401,7 @@ export class VendorUsageImportService {
       await queryRunner.manager.save(batch);
 
       await queryRunner.commitTransaction();
+      await this.generateCertificatesForBatch(pendingCertificates);
       this.logger.log(
         `Vendor usage batch ${batchId} completed: credited=${acceptedCredited} skipped=${acceptedSkipped} rejected=${rejected} mintFailed=${mintFailed}`,
       );
@@ -406,6 +419,26 @@ export class VendorUsageImportService {
       throw e;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  private async generateCertificatesForBatch(
+    jobs: PendingCertificateJob[],
+  ): Promise<void> {
+    for (const job of jobs) {
+      const reward = await this.dataSource
+        .getRepository(RewardTransactionEntity)
+        .findOne({ where: { id: job.rewardTransactionId } });
+      const installation = await this.installationRepository.findOne({
+        where: { id: job.installationId },
+      });
+      if (!reward || !installation || !reward.txHash) {
+        continue;
+      }
+      await this.certificateGenerationService.tryGenerateFromRewardTransaction(
+        reward,
+        installation,
+      );
     }
   }
 

@@ -50,4 +50,15 @@ export class DashboardResponseDto {
     date: Date;
     amount?: number;
   }[];
+  @ApiProperty({ required: false, nullable: true })
+  latestCertificate?: {
+    id: number;
+    certificateId: string;
+    month: number;
+    year: number;
+    energyGenerated: number;
+    rewardAmount: number;
+    achievementLevel: string;
+    issueDate: Date;
+  } | null;
 }

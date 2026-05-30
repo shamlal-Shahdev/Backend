@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
 const WATTSUP_TOKEN_ABI = [
@@ -10,10 +10,13 @@ const WATTSUP_TOKEN_ABI = [
   'function mint(address to, uint256 amount)',
 ];
 @Injectable()
-export class TokenService {
+export class TokenService implements OnModuleInit {
+  private readonly logger = new Logger(TokenService.name);
   private readonly provider: ethers.JsonRpcProvider;
   private readonly signer: ethers.Wallet;
   private readonly token: ethers.Contract;
+  private readonly rpcUrl: string;
+  private readonly tokenAddress: string;
   constructor(private readonly configService: ConfigService) {
     const rpcUrl = this.configService.get<string>('HARDHAT_RPC_URL');
     const tokenAddress = this.configService.get<string>('TOKEN_ADDRESS');
@@ -23,6 +26,8 @@ export class TokenService {
         'Blockchain env vars (HARDHAT_RPC_URL, TOKEN_ADDRESS, TREASURY_PRIVATE_KEY) are required',
       );
     }
+    this.rpcUrl = rpcUrl;
+    this.tokenAddress = tokenAddress;
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.signer = new ethers.Wallet(treasuryPk, this.provider);
     this.token = new ethers.Contract(
@@ -31,6 +36,44 @@ export class TokenService {
       this.signer,
     );
   }
+
+  async onModuleInit(): Promise<void> {
+    try {
+      const network = await this.provider.getNetwork();
+      const chainId = Number(network.chainId);
+      const latestBlock = await this.provider.getBlockNumber();
+      const code = await this.provider.getCode(this.tokenAddress);
+      const hasCode = code !== '0x';
+      const signerAddress = await this.signer.getAddress();
+      let decimals: number | null = null;
+      let decimalsError: string | null = null;
+
+      try {
+        const decimalsRaw = await this.token.decimals();
+        decimals = Number(decimalsRaw);
+      } catch (error) {
+        decimalsError = error instanceof Error ? error.message : String(error);
+      }
+
+      this.logger.log(
+        `Blockchain health-check: rpc=${this.rpcUrl} chain=${network.name} chainId=${chainId} block=${latestBlock} token=${this.tokenAddress} hasCode=${hasCode} codeSize=${code.length} decimals=${
+          decimals ?? 'n/a'
+        } signer=${signerAddress}`,
+      );
+      if (decimalsError) {
+        this.logger.error(
+          `Token decimals() check failed for ${this.tokenAddress}: ${decimalsError}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Blockchain health-check failed: rpc=${this.rpcUrl} token=${this.tokenAddress} error=${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   async getTokenInfo() {
     const [name, symbol, decimalsRaw, totalSupplyRaw] = await Promise.all([
       this.token.name(),

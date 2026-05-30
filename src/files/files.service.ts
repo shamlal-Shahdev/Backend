@@ -51,6 +51,26 @@ export class FilesService {
     const fullFilePath = join(process.cwd(), 'files', key);
     return readFile(fullFilePath);
   }
+  async saveBuffer(
+    buffer: Buffer,
+    prefix: string,
+    extension: string,
+  ): Promise<{ key: string; url: string }> {
+    const folder = prefix || 'uploads';
+    const key = `${folder}/${randomStringGenerator()}.${extension}`;
+    const filesDir = join(process.cwd(), 'files');
+    const folderDir = join(filesDir, folder);
+    const fullFilePath = join(filesDir, key);
+    if (!existsSync(filesDir)) {
+      await mkdir(filesDir, { recursive: true });
+    }
+    if (!existsSync(folderDir)) {
+      await mkdir(folderDir, { recursive: true });
+    }
+    await writeFile(fullFilePath, buffer);
+    const fileRecord = await this.fileRepository.create({ path: key });
+    return { key: fileRecord.path, url: fileRecord.path };
+  }
   async create(file: Express.Multer.File): Promise<FileType> {
     const fileExtension =
       file.originalname.split('.').pop()?.toLowerCase() || 'jpg';

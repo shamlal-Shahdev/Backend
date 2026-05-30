@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
@@ -12,6 +12,7 @@ import { RewardTransactionEntity } from '../reward-transaction/entity/reward-tra
 import { PredictionEntity } from '../prediction/entity/prediction.entity';
 import { InstallationEntity } from '../installation/entity/installation.entity';
 import { UserCarbonMetricsService } from './user-carbon-metrics.service';
+import { CertificateModule } from '../certificate/certificate.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -24,6 +25,7 @@ import { UserCarbonMetricsService } from './user-carbon-metrics.service';
       PredictionEntity,
       InstallationEntity,
     ]),
+    forwardRef(() => CertificateModule),
   ],
   controllers: [UserController],
   providers: [UserService, DashboardService, UserCarbonMetricsService],

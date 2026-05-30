@@ -19,6 +19,7 @@ import { EmailService } from '../../email/email.service';
 import { TokenService } from '../../blockchain/token.service';
 import { WalletBalanceService } from '../../wallet-balance/wallet-balance.service';
 import { UserWalletService } from '../../user-wallet/user-wallet.service';
+import { CertificateGenerationService } from '../../certificate/certificate-generation.service';
 
 @Injectable()
 export class AdminEnergyRequestService {
@@ -33,6 +34,7 @@ export class AdminEnergyRequestService {
     private readonly tokenService: TokenService,
     private readonly walletBalanceService: WalletBalanceService,
     private readonly userWalletService: UserWalletService,
+    private readonly certificateGenerationService: CertificateGenerationService,
   ) {}
 
   async getAllEnergyRequests(
@@ -139,6 +141,7 @@ export class AdminEnergyRequestService {
       request.status = EnergyRequestStatus.REWARD_GENERATED;
       request.blockchainTxHash = blockchainResult.txHash;
       request.rewardAmount = rewardAmount;
+      request.energyGeneratedKwh = dto.energyGeneratedKwh;
       this.logger.log(
         `Request ${requestId} approved and reward generated. TX: ${blockchainResult.txHash}`,
       );
@@ -171,6 +174,12 @@ export class AdminEnergyRequestService {
         dto.remark;
     }
     const savedRequest = await this.energyRequestRepository.save(request);
+    if (blockchainResult.success && blockchainResult.txHash) {
+      await this.certificateGenerationService.tryGenerateFromEnergyRequest(
+        savedRequest,
+        dto.energyGeneratedKwh,
+      );
+    }
     try {
       if (blockchainResult.success && blockchainResult.txHash) {
         await this.emailService.sendEnergyRewardGeneratedEmail(

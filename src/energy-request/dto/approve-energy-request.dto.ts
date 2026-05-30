@@ -10,4 +10,12 @@ export class ApproveEnergyRequestDto {
   @IsNumber()
   @Min(0)
   rewardAmount?: number;
+  @ApiProperty({
+    required: true,
+    example: 500,
+    description: 'Verified energy generated in kWh for the certificate period',
+  })
+  @IsNumber()
+  @Min(0.0001)
+  energyGeneratedKwh: number;
 }

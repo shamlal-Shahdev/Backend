@@ -13,6 +13,7 @@ import { FilesModule } from '../../files/files.module';
 import { VendorCompanyProfileModule } from '../company-profile/vendor-company-profile.module';
 import { BlockchainModule } from '../../blockchain/blockchain.module';
 import { UserWalletModule } from '../../user-wallet/user-wallet.module';
+import { CertificateModule } from '../../certificate/certificate.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UserWalletModule } from '../../user-wallet/user-wallet.module';
     FilesModule,
     BlockchainModule,
     UserWalletModule,
+    CertificateModule,
   ],
   controllers: [VendorUsageImportController],
   providers: [

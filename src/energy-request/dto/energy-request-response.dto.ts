@@ -34,6 +34,8 @@ export class EnergyRequestResponseDto {
   rewardAmount: number | null;
   @ApiProperty({ nullable: true })
   blockchainTxHash: string | null;
+  @ApiProperty({ nullable: true, example: 500 })
+  energyGeneratedKwh: number | null;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()

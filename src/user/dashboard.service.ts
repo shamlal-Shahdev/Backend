@@ -11,6 +11,7 @@ import { PredictionEntity, PredictionStatus } from '../prediction/entity/predict
 import { InstallationEntity } from '../installation/entity/installation.entity';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
 import { UserCarbonMetricsService } from './user-carbon-metrics.service';
+import { CertificateService } from '../certificate/certificate.service';
 @Injectable()
 export class DashboardService {
   constructor(
@@ -25,6 +26,7 @@ export class DashboardService {
     @InjectRepository(InstallationEntity)
     private readonly installationRepository: Repository<InstallationEntity>,
     private readonly userCarbonMetricsService: UserCarbonMetricsService,
+    private readonly certificateService: CertificateService,
   ) {}
   async getUserDashboard(userId: number): Promise<DashboardResponseDto> {
     const totalEnergyResult = await this.rewardTransactionRepository
@@ -144,6 +146,7 @@ export class DashboardService {
     const recentActivity = allActivities
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
+    const latestCertificate = await this.certificateService.getLatestForUser(userId);
     return {
       totalEnergyGenerated,
       totalTokensEarned,
@@ -157,6 +160,7 @@ export class DashboardService {
       carbonReductionTrend,
       rewardsDistribution,
       recentActivity,
+      latestCertificate,
     };
   }
 }

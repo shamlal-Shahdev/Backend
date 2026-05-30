@@ -8,6 +8,7 @@ import { EmailModule } from '../../email/email.module';
 import { BlockchainModule } from '../../blockchain/blockchain.module';
 import { WalletBalanceModule } from '../../wallet-balance/wallet-balance.module';
 import { UserWalletModule } from '../../user-wallet/user-wallet.module';
+import { CertificateModule } from '../../certificate/certificate.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserWalletModule } from '../../user-wallet/user-wallet.module';
     BlockchainModule,
     WalletBalanceModule,
     UserWalletModule,
+    CertificateModule,
   ],
   controllers: [AdminEnergyRequestController],
   providers: [AdminEnergyRequestService],

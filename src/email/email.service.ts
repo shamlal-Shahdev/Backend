@@ -166,4 +166,41 @@ export class EmailService {
       },
     });
   }
+  async sendCertificateGeneratedEmail(
+    to: string,
+    name: string,
+    month: number,
+    year: number,
+    energyGeneratedKwh: number,
+    certificateId: string,
+    verifyUrl: string,
+  ) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    await this.mailer.sendMail({
+      to,
+      subject: 'Proof of Green Certificate Generated - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'certificate-generated.hbs'),
+      context: {
+        name,
+        month: monthNames[month - 1],
+        year,
+        energyGeneratedKwh: energyGeneratedKwh.toFixed(2),
+        certificateId,
+        verifyUrl,
+      },
+    });
+  }
 }

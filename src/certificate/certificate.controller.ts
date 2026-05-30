@@ -1,24 +1,19 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
+  Request,
   ParseIntPipe,
-  DefaultValuePipe,
+  StreamableFile,
+  Header,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -26,9 +21,24 @@ import { Roles } from '../roles/roles.decorator';
 import { RolesGuard } from '../roles/roles.guard';
 import { RoleEnum } from '../roles/roles.enum';
 import { CertificateService } from './certificate.service';
-import { CreateCertificateDto } from './dto/create-certificate.dto';
-import { UpdateCertificateDto } from './dto/update-certificate.dto';
-import { CertificateEntity } from './entity/certificate.entity';
+import { CertificateListQueryDto } from './dto/certificate-list-query.dto';
+import { CertificateResponseDto } from './dto/certificate-response.dto';
+import {
+  CertificateStatsResponseDto,
+  LatestCertificateSummaryDto,
+} from './dto/certificate-stats-response.dto';
+import { CertificateMonthOverviewDto } from './dto/certificate-month-overview.dto';
+
+type AuthenticatedRequest = {
+  user: { id: number | string };
+};
+
+function resolveUserId(req: AuthenticatedRequest): number {
+  return typeof req.user.id === 'string'
+    ? parseInt(req.user.id, 10)
+    : req.user.id;
+}
+
 @ApiTags('Certificates')
 @Controller({
   path: 'certificates',
@@ -38,73 +48,63 @@ import { CertificateEntity } from './entity/certificate.entity';
 @ApiBearerAuth()
 export class CertificateController {
   constructor(private readonly certificateService: CertificateService) {}
-  @Post()
-  @ApiOperation({ summary: 'Create a new certificate' })
-  @ApiResponse({
-    status: 201,
-    description: 'Certificate created successfully',
-    type: CertificateEntity,
-  })
-  @Roles(RoleEnum.admin)
-  @HttpCode(HttpStatus.CREATED)
-  create(
-    @Body() createCertificateDto: CreateCertificateDto,
-  ): Promise<CertificateEntity> {
-    return this.certificateService.create(createCertificateDto);
+
+  @Get('me')
+  @Roles(RoleEnum.user)
+  @ApiOperation({ summary: 'Get current user certificates' })
+  async findMine(
+    @Request() req: AuthenticatedRequest,
+    @Query() query: CertificateListQueryDto,
+  ): Promise<{ certificates: CertificateResponseDto[]; total: number }> {
+    return this.certificateService.findForUser(resolveUserId(req), query);
   }
-  @Get()
-  @ApiOperation({ summary: 'Get all certificates with pagination' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiResponse({
-    status: 200,
-    description: 'List of certificates',
-    type: [CertificateEntity],
+
+  @Get('me/months')
+  @Roles(RoleEnum.user)
+  @ApiOperation({
+    summary: 'Get months with verified energy generation and certificate status',
   })
-  @Roles(RoleEnum.admin, RoleEnum.user)
-  findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
-    return this.certificateService.findAll(page, limit);
+  @ApiResponse({ status: 200, type: [CertificateMonthOverviewDto] })
+  async getMyMonthlyOverview(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<CertificateMonthOverviewDto[]> {
+    return this.certificateService.getUserMonthlyOverview(resolveUserId(req));
   }
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a certificate by ID' })
+
+  @Get('me/stats')
+  @Roles(RoleEnum.user)
+  @ApiOperation({ summary: 'Get current user certificate lifetime statistics' })
+  @ApiResponse({ status: 200, type: CertificateStatsResponseDto })
+  async getMyStats(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<CertificateStatsResponseDto> {
+    return this.certificateService.getUserStats(resolveUserId(req));
+  }
+
+  @Get('me/latest')
+  @Roles(RoleEnum.user)
+  @ApiOperation({ summary: 'Get latest certificate summary for dashboard' })
+  async getMyLatest(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<LatestCertificateSummaryDto | null> {
+    return this.certificateService.getLatestForUser(resolveUserId(req));
+  }
+
+  @Get('me/:id/download')
+  @Roles(RoleEnum.user)
+  @ApiOperation({ summary: 'Download certificate PDF' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Certificate found',
-    type: CertificateEntity,
-  })
-  @ApiResponse({ status: 404, description: 'Certificate not found' })
-  @Roles(RoleEnum.admin, RoleEnum.user)
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<CertificateEntity> {
-    return this.certificateService.findOne(id);
-  }
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a certificate' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Certificate updated successfully',
-    type: CertificateEntity,
-  })
-  @ApiResponse({ status: 404, description: 'Certificate not found' })
-  @Roles(RoleEnum.admin)
-  update(
+  @Header('Content-Type', 'application/pdf')
+  async downloadMine(
+    @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateCertificateDto: UpdateCertificateDto,
-  ): Promise<CertificateEntity> {
-    return this.certificateService.update(id, updateCertificateDto);
-  }
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a certificate' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 204, description: 'Certificate deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Certificate not found' })
-  @Roles(RoleEnum.admin)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.certificateService.remove(id);
+  ): Promise<StreamableFile> {
+    const userId = resolveUserId(req);
+    const { buffer, filename } =
+      await this.certificateService.getPdfDownloadForUser(userId, id);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${filename}"`,
+    });
   }
 }

@@ -78,6 +78,14 @@ export class EnergyRequestEntity extends EntityRelationalHelper {
   rewardAmount: number | null;
   @Column({ name: 'blockchain_tx_hash', type: 'varchar', length: 255, nullable: true })
   blockchainTxHash: string | null;
+  @Column({
+    name: 'energy_generated_kwh',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
+  energyGeneratedKwh: number | null;
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
   @UpdateDateColumn({ name: 'updated_at' })
