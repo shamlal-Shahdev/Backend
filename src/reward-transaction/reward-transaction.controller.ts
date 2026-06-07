@@ -56,10 +56,31 @@ export class RewardTransactionController {
   ): Promise<RewardTransactionEntity> {
     return this.rewardTransactionService.create(createRewardTransactionDto);
   }
+  @Get('users')
+  @ApiOperation({ summary: 'List users who have reward transactions (admin)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 25 })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated users with reward summaries',
+  })
+  @Roles(RoleEnum.admin)
+  findUsersWithRewards(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(25), ParseIntPipe) limit: number,
+  ) {
+    return this.rewardTransactionService.findUsersWithRewards(page, limit);
+  }
   @Get()
   @ApiOperation({ summary: 'Get all reward transactions with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({
+    name: 'userId',
+    required: false,
+    type: Number,
+    description: 'Admin only: filter by user',
+  })
   @ApiResponse({
     status: 200,
     description: 'List of reward transactions',
@@ -70,15 +91,23 @@ export class RewardTransactionController {
     @Request() req: { user: { id: number | string; role: string } },
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('userId') userIdRaw?: string,
   ) {
     const isAdmin = req.user.role === UserRole.ADMIN;
     const uid =
       typeof req.user.id === 'string' ? parseInt(req.user.id, 10) : req.user.id;
-    return this.rewardTransactionService.findAll(
-      page,
-      limit,
-      isAdmin ? undefined : uid,
-    );
+    let filterUserId: number | undefined;
+    if (isAdmin) {
+      if (userIdRaw) {
+        const parsed = parseInt(userIdRaw, 10);
+        if (!Number.isNaN(parsed)) {
+          filterUserId = parsed;
+        }
+      }
+    } else {
+      filterUserId = uid;
+    }
+    return this.rewardTransactionService.findAll(page, limit, filterUserId);
   }
   @Get(':id')
   @ApiOperation({ summary: 'Get a reward transaction by ID' })

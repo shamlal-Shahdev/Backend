@@ -43,6 +43,65 @@ export class RewardTransactionService {
     const [items, total] = await qb.getManyAndCount();
     return { items, total, page, limit };
   }
+  async findUsersWithRewards(
+    page: number = 1,
+    limit: number = 25,
+  ): Promise<{
+    items: Array<{
+      userId: number;
+      user: { id: number; name: string; email: string };
+      transactionCount: number;
+      totalTokens: number;
+      totalKwh: number;
+      lastIssuedAt: Date;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const items = await this.rewardTransactionRepository
+      .createQueryBuilder('r')
+      .innerJoin('r.user', 'user')
+      .select('r.user_id', 'userId')
+      .addSelect('user.id', 'user_id')
+      .addSelect('user.name', 'user_name')
+      .addSelect('user.email', 'user_email')
+      .addSelect('COUNT(r.id)', 'transactionCount')
+      .addSelect('SUM(r.tokens_amount)', 'totalTokens')
+      .addSelect('SUM(r.kwh_rewarded)', 'totalKwh')
+      .addSelect('MAX(r.issued_at)', 'lastIssuedAt')
+      .groupBy('r.user_id')
+      .addGroupBy('user.id')
+      .addGroupBy('user.name')
+      .addGroupBy('user.email')
+      .orderBy('MAX(r.issued_at)', 'DESC')
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany();
+
+    const countResult = await this.rewardTransactionRepository
+      .createQueryBuilder('r')
+      .select('COUNT(DISTINCT r.user_id)', 'count')
+      .getRawOne<{ count: string }>();
+
+    return {
+      items: items.map((row) => ({
+        userId: Number(row.userId),
+        user: {
+          id: Number(row.user_id),
+          name: row.user_name,
+          email: row.user_email,
+        },
+        transactionCount: Number(row.transactionCount),
+        totalTokens: Number(row.totalTokens),
+        totalKwh: Number(row.totalKwh),
+        lastIssuedAt: row.lastIssuedAt,
+      })),
+      total: Number(countResult?.count ?? 0),
+      page,
+      limit,
+    };
+  }
   async findOne(id: number): Promise<RewardTransactionEntity> {
     const rewardTransaction = await this.rewardTransactionRepository.findOne({
       where: { id },

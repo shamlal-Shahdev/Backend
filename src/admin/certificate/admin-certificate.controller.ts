@@ -6,6 +6,7 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,6 +32,15 @@ import { CertificateEntity } from '../../certificate/entity/certificate.entity';
 @ApiBearerAuth()
 export class AdminCertificateController {
   constructor(private readonly certificateService: CertificateService) {}
+
+  @Get('users')
+  @ApiOperation({ summary: 'List users who have certificates' })
+  async findUsersWithCertificates(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(25), ParseIntPipe) limit: number,
+  ) {
+    return this.certificateService.findUsersWithCertificates(page, limit);
+  }
 
   @Get()
   @ApiOperation({ summary: 'List all certificates with filters' })

@@ -83,6 +83,68 @@ export class CertificateService {
     return this.findWithFilters(query);
   }
 
+  async findUsersWithCertificates(
+    page: number = 1,
+    limit: number = 25,
+  ): Promise<{
+    items: Array<{
+      userId: number;
+      user: { id: number; name: string; email: string };
+      certificateCount: number;
+      totalEnergy: number;
+      totalRewards: number;
+      lastIssuedAt: Date;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const items = await this.certificateRepository
+      .createQueryBuilder('c')
+      .innerJoin('c.user', 'user')
+      .select('c.user_id', 'userId')
+      .addSelect('user.id', 'user_id')
+      .addSelect('user.name', 'user_name')
+      .addSelect('user.email', 'user_email')
+      .addSelect('COUNT(c.id)', 'certificateCount')
+      .addSelect('SUM(c.total_kwh)', 'totalEnergy')
+      .addSelect('SUM(c.reward_amount)', 'totalRewards')
+      .addSelect('MAX(c.generated_at)', 'lastIssuedAt')
+      .where('c.total_kwh > 0')
+      .groupBy('c.user_id')
+      .addGroupBy('user.id')
+      .addGroupBy('user.name')
+      .addGroupBy('user.email')
+      .orderBy('MAX(c.generated_at)', 'DESC')
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany();
+
+    const countResult = await this.certificateRepository
+      .createQueryBuilder('c')
+      .select('COUNT(DISTINCT c.user_id)', 'count')
+      .where('c.total_kwh > 0')
+      .getRawOne<{ count: string }>();
+
+    return {
+      items: items.map((row) => ({
+        userId: Number(row.userId),
+        user: {
+          id: Number(row.user_id),
+          name: row.user_name,
+          email: row.user_email,
+        },
+        certificateCount: Number(row.certificateCount),
+        totalEnergy: Number(row.totalEnergy),
+        totalRewards: Number(row.totalRewards),
+        lastIssuedAt: row.lastIssuedAt,
+      })),
+      total: Number(countResult?.count ?? 0),
+      page,
+      limit,
+    };
+  }
+
   async getPdfDownloadForUser(
     userId: number,
     id: number,
