@@ -28,7 +28,16 @@ export class DashboardService {
     private readonly userCarbonMetricsService: UserCarbonMetricsService,
     private readonly certificateService: CertificateService,
   ) {}
-  async getUserDashboard(userId: number): Promise<DashboardResponseDto> {
+  private resolveTrendMonths(months?: number): number {
+    const allowed = [3, 6, 12];
+    if (months && allowed.includes(months)) {
+      return months;
+    }
+    return 6;
+  }
+
+  async getUserDashboard(userId: number, months = 6): Promise<DashboardResponseDto> {
+    const trendMonths = this.resolveTrendMonths(months);
     const totalEnergyResult = await this.rewardTransactionRepository
       .createQueryBuilder('rt')
       .select('COALESCE(SUM(rt.kwh_rewarded), 0)', 'total')
@@ -77,7 +86,7 @@ export class DashboardService {
 
     const energyTrend: { month: string; energy: number }[] = [];
     const currentDate = new Date();
-    for (let i = 5; i >= 0; i--) {
+    for (let i = trendMonths - 1; i >= 0; i--) {
       const date = new Date(currentDate);
       date.setMonth(date.getMonth() - i);
       const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

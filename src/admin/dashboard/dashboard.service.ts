@@ -10,6 +10,7 @@ import {
   EnergyRequestEntity,
   EnergyRequestStatus,
 } from '../../energy-request/entity/energy-request.entity';
+import { RewardTransactionEntity } from '../../reward-transaction/entity/reward-transaction.entity';
 import { KycSubmissionStatus } from '../../kyc/kyc-submission-status.enum';
 
 @Injectable()
@@ -23,6 +24,8 @@ export class AdminDashboardService {
     private readonly installationRepository: Repository<InstallationEntity>,
     @InjectRepository(EnergyRequestEntity)
     private readonly energyRequestRepository: Repository<EnergyRequestEntity>,
+    @InjectRepository(RewardTransactionEntity)
+    private readonly rewardTransactionRepository: Repository<RewardTransactionEntity>,
   ) {}
 
   private async countUsersWithLatestKycStatus(
@@ -82,9 +85,14 @@ export class AdminDashboardService {
     const rejectedEnergy = await this.energyRequestRepository.count({
       where: { status: EnergyRequestStatus.REJECTED },
     });
-    const rewardGeneratedEnergy = await this.energyRequestRepository.count({
-      where: { status: EnergyRequestStatus.REWARD_GENERATED },
-    });
+    const rewardGeneratedFromEnergyRequests =
+      await this.energyRequestRepository.count({
+        where: { status: EnergyRequestStatus.REWARD_GENERATED },
+      });
+    const rewardGeneratedFromTransactions =
+      await this.rewardTransactionRepository.count();
+    const rewardGeneratedEnergy =
+      rewardGeneratedFromEnergyRequests + rewardGeneratedFromTransactions;
     const blockchainFailedEnergy = await this.energyRequestRepository.count({
       where: { status: EnergyRequestStatus.BLOCKCHAIN_FAILED },
     });

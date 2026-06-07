@@ -75,15 +75,24 @@ export class UserController {
   }
   @Get('dashboard/user')
   @ApiOperation({ summary: 'Get user dashboard data' })
+  @ApiQuery({
+    name: 'months',
+    required: false,
+    type: Number,
+    description: 'Number of months for energy generation trend (3, 6, or 12)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Dashboard data retrieved successfully',
     type: DashboardResponseDto,
   })
   @Roles(RoleEnum.user)
-  async getUserDashboard(@Request() req): Promise<DashboardResponseDto> {
+  async getUserDashboard(
+    @Request() req,
+    @Query('months', new DefaultValuePipe(6), ParseIntPipe) months: number,
+  ): Promise<DashboardResponseDto> {
     const user = req.user;
-    return await this.dashboardService.getUserDashboard(user.id);
+    return await this.dashboardService.getUserDashboard(user.id, months);
   }
   @Get(':id')
   @ApiOperation({ summary: 'Get a user by ID' })
