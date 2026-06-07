@@ -14,7 +14,7 @@ export type CertificatePdfInput = {
   year: number;
   energyGeneratedKwh: number;
   meterId: string | null;
-  verifiedAt: Date | null;
+  memberSince: Date;
   co2OffsetKg: number;
   treesEquivalent: number;
   achievementLevel: AchievementLevel;
@@ -34,7 +34,7 @@ export type MonthEnergyRecord = {
 export type CertificateGenerationPdfContext = {
   certificateId: string;
   issueDate: Date;
-  user: { name: string; email: string };
+  user: { name: string; email: string; createdAt: Date };
   walletAddress: string;
   installation: {
     location: string;

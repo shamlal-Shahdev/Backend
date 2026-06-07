@@ -5,7 +5,7 @@ import { join } from 'path';
 import * as QRCode from 'qrcode';
 import PDFDocument from 'pdfkit';
 import { AllConfigType } from '../config/config.type';
-import { AchievementLevel, SustainabilityBadge } from './certificate.enums';
+import { AchievementLevel } from './certificate.enums';
 import { CertificatePdfInput } from './certificate.types';
 import {
   formatAchievementLabel,
@@ -56,7 +56,6 @@ export class CertificatePdfService {
       'en-US',
       { month: 'long', year: 'numeric' },
     );
-    const verificationDate = input.verifiedAt ?? input.issueDate;
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 0 });
@@ -72,17 +71,14 @@ export class CertificatePdfService {
       this.drawPageBorder(doc, margin);
       const headerEndY = this.drawHeader(doc, {
         pageWidth,
+        margin,
         brandName,
         monthLabel,
-        certificateId: input.certificateId,
-        issueDate: input.issueDate,
         logoPath,
+        achievementLevel: input.achievementLevel,
       });
 
-      let y = headerEndY + 14;
-
-      // Solid white band between meta pill and metric cards
-      doc.rect(margin, headerEndY, contentWidth, 14).fill('#FFFFFF');
+      let y = headerEndY + 18;
 
       y = this.drawMetricCards(doc, margin, y, contentWidth, {
         energyKwh: input.energyGeneratedKwh,
@@ -97,8 +93,11 @@ export class CertificatePdfService {
       const leftPanelHeight = this.drawInfoPanel(doc, margin, y, columnWidth, 'Recipient', [
         { label: 'Name', value: input.userName },
         { label: 'Email', value: input.userEmail },
-        { label: 'Wallet', value: truncateMiddle(input.walletAddress) },
         { label: 'Location', value: input.userLocation },
+        {
+          label: 'Issue Date',
+          value: input.issueDate.toLocaleDateString('en-US'),
+        },
       ]);
       const rightPanelHeight = this.drawInfoPanel(
         doc,
@@ -118,24 +117,21 @@ export class CertificatePdfService {
           { label: 'Certificate Month', value: monthLabel },
           { label: 'Smart Meter ID', value: input.meterId ?? 'N/A' },
           {
-            label: 'Verified',
-            value: verificationDate.toLocaleDateString('en-US'),
+            label: 'Member Since',
+            value: input.memberSince.toLocaleDateString('en-US'),
+          },
+          {
+            label: 'Sustainability Badge',
+            value: formatBadgeLabel(input.badge),
           },
         ],
       );
 
       y += Math.max(leftPanelHeight, rightPanelHeight) + 16;
 
-      y = this.drawAchievementStrip(doc, margin, y, contentWidth, {
-        level: input.achievementLevel,
-        badge: input.badge,
-      });
-
-      y += 16;
       this.drawVerificationFooter(doc, margin, y, contentWidth, pageWidth, {
         qrBuffer,
         verifyUrl: input.verifyUrl,
-        transactionHash: input.transactionHash,
         brandName,
       });
 
@@ -169,6 +165,18 @@ export class CertificatePdfService {
     return null;
   }
 
+  private resolveBadgePath(level: AchievementLevel): string | null {
+    const candidates = [
+      join(process.cwd(), 'assets', 'images', 'badges', `${level}.png`),
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
   private drawPageBorder(doc: PdfDoc, margin: number): void {
     const { width, height } = doc.page;
     doc
@@ -187,89 +195,94 @@ export class CertificatePdfService {
     doc: PdfDoc,
     options: {
       pageWidth: number;
+      margin: number;
       brandName: string;
       monthLabel: string;
-      certificateId: string;
-      issueDate: Date;
       logoPath: string | null;
+      achievementLevel: AchievementLevel;
     },
   ): number {
-    const headerHeight = 128;
+    const headerHeight = 132;
+    const titleY = 48;
+    const titleSize = 20;
+    const badgeSize = 58;
+    const badgeX = options.pageWidth - options.margin - badgeSize;
+    const badgeY = titleY + Math.round((titleSize - badgeSize) / 2);
+
     doc.save();
     doc.rect(0, 0, options.pageWidth, headerHeight).fill(COLORS.primary);
-    doc
-      .rect(0, headerHeight - 6, options.pageWidth, 6)
-      .fill(COLORS.accent);
     doc.restore();
+
+    const logoSize = 48;
+    let textX = options.margin;
 
     if (options.logoPath) {
       try {
-        doc.image(options.logoPath, options.pageWidth / 2 - 28, 14, {
-          width: 56,
-          height: 56,
+        doc.image(options.logoPath, options.margin, 24, {
+          width: logoSize,
+          height: logoSize,
         });
+        textX = options.margin + logoSize + 12;
       } catch {
-        // Logo optional — continue without it
+        // Logo optional
       }
     }
 
     doc
       .fillColor(COLORS.textLight)
       .font('Helvetica-Bold')
-      .fontSize(11)
-      .text(options.brandName.toUpperCase(), 0, options.logoPath ? 72 : 28, {
-        align: 'center',
-        width: options.pageWidth,
+      .fontSize(10)
+      .text(options.brandName.toUpperCase(), textX, 28, {
+        width: badgeX - textX - 16,
       });
 
     doc
-      .fontSize(22)
-      .text('Proof of Green Certificate', 0, options.logoPath ? 88 : 48, {
-        align: 'center',
-        width: options.pageWidth,
+      .fontSize(titleSize)
+      .text('Proof of Green Certificate', textX, titleY, {
+        width: badgeX - textX - 12,
       });
 
     doc
       .font('Helvetica')
       .fontSize(10)
       .fillColor('#E8F5E9')
-      .text(`Renewable Energy Contribution — ${options.monthLabel}`, 0, options.logoPath ? 114 : 74, {
-        align: 'center',
-        width: options.pageWidth,
+      .text(`Renewable Energy Contribution — ${options.monthLabel}`, textX, 72, {
+        width: badgeX - textX - 16,
       });
 
-    const metaY = headerHeight + 12;
-    const metaWidth = 360;
-    const metaX = (options.pageWidth - metaWidth) / 2;
-    const metaHeight = 32;
+    const badgePath = this.resolveBadgePath(options.achievementLevel);
+    if (badgePath) {
+      try {
+        doc.image(badgePath, badgeX, badgeY, {
+          width: badgeSize,
+          height: badgeSize,
+        });
+      } catch {
+        this.drawFallbackBadge(doc, badgeX, badgeY, badgeSize, options.achievementLevel);
+      }
+    } else {
+      this.drawFallbackBadge(doc, badgeX, badgeY, badgeSize, options.achievementLevel);
+    }
 
-    doc
-      .roundedRect(metaX, metaY, metaWidth, metaHeight, 16)
-      .fill(COLORS.panelBg);
+    return headerHeight;
+  }
 
+  private drawFallbackBadge(
+    doc: PdfDoc,
+    x: number,
+    y: number,
+    size: number,
+    level: AchievementLevel,
+  ): void {
+    const label = formatAchievementLabel(level).slice(0, 1);
     doc
-      .fillColor(COLORS.textMuted)
-      .fontSize(7)
-      .text('CERTIFICATE ID', metaX + 12, metaY + 7, { width: metaWidth / 2 - 24 });
-    doc.text('ISSUE DATE', metaX + metaWidth / 2 + 12, metaY + 7, {
-      width: metaWidth / 2 - 24,
-    });
-
-    doc
-      .fillColor(COLORS.textDark)
+      .fillColor(COLORS.achievement[level])
       .font('Helvetica-Bold')
-      .fontSize(8)
-      .text(options.certificateId, metaX + 12, metaY + 18, {
-        width: metaWidth / 2 - 24,
-        lineGap: 1,
+      .fontSize(Math.round(size * 0.45))
+      .text(label, x, y + size * 0.28, {
+        width: size,
+        align: 'center',
       });
-    doc
-      .font('Helvetica')
-      .text(options.issueDate.toLocaleDateString('en-US'), metaX + metaWidth / 2 + 12, metaY + 18, {
-        width: metaWidth / 2 - 24,
-      });
-
-    return metaY + metaHeight;
   }
 
   private drawMetricCards(
@@ -406,51 +419,6 @@ export class CertificatePdfService {
     return panelHeight;
   }
 
-  private drawAchievementStrip(
-    doc: PdfDoc,
-    x: number,
-    y: number,
-    width: number,
-    data: { level: AchievementLevel; badge: SustainabilityBadge },
-  ): number {
-    const stripHeight = 56;
-    const levelColor = COLORS.achievement[data.level];
-
-    doc.roundedRect(x, y, width, stripHeight, 8).fill(COLORS.panelBg);
-    doc
-      .roundedRect(x, y, width, stripHeight, 8)
-      .lineWidth(1)
-      .strokeColor(COLORS.panelBorder)
-      .stroke();
-
-    doc.circle(x + 36, y + stripHeight / 2, 18).fill(levelColor);
-    doc
-      .fillColor(COLORS.textLight)
-      .font('Helvetica-Bold')
-      .fontSize(8)
-      .text(formatAchievementLabel(data.level).slice(0, 1), x + 22, y + stripHeight / 2 - 5, {
-        width: 28,
-        align: 'center',
-      });
-
-    doc
-      .fillColor(COLORS.textDark)
-      .font('Helvetica-Bold')
-      .fontSize(14)
-      .text(`${formatAchievementLabel(data.level)} Achievement`, x + 68, y + 14, {
-        width: width - 84,
-      });
-    doc
-      .fillColor(COLORS.textMuted)
-      .font('Helvetica')
-      .fontSize(10)
-      .text(`Sustainability Badge: ${formatBadgeLabel(data.badge)}`, x + 68, y + 32, {
-        width: width - 84,
-      });
-
-    return y + stripHeight;
-  }
-
   private drawVerificationFooter(
     doc: PdfDoc,
     x: number,
@@ -460,7 +428,6 @@ export class CertificatePdfService {
     data: {
       qrBuffer: Buffer;
       verifyUrl: string;
-      transactionHash: string;
       brandName: string;
     },
   ): void {
@@ -495,16 +462,9 @@ export class CertificatePdfService {
       });
 
     doc
-      .fillColor(COLORS.textDark)
-      .fontSize(8)
-      .text(`Blockchain: ${truncateMiddle(data.transactionHash, 12, 10)}`, textX, footerY + 50, {
-        width: textWidth,
-      });
-
-    doc
       .fillColor(COLORS.primaryLight)
       .fontSize(8)
-      .text(`Scan QR or visit: ${data.verifyUrl}`, textX, footerY + 66, {
+      .text(`Scan QR or visit: ${data.verifyUrl}`, textX, footerY + 50, {
         width: textWidth,
         link: data.verifyUrl,
       });
@@ -519,11 +479,4 @@ export class CertificatePdfService {
         { width: pageWidth - x * 2, align: 'center' },
       );
   }
-}
-
-function truncateMiddle(value: string, start = 8, end = 6): string {
-  if (!value || value.length <= start + end + 3) {
-    return value || 'N/A';
-  }
-  return `${value.slice(0, start)}...${value.slice(-end)}`;
 }
