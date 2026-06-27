@@ -166,6 +166,47 @@ export class EmailService {
       },
     });
   }
+  async sendPredictionBonusEmail(
+    to: string,
+    name: string,
+    month: number,
+    year: number,
+    predictedKwh: number,
+    actualKwh: number,
+    accuracy: number,
+    rewardTokens: number,
+    transactionHash?: string,
+  ) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    await this.mailer.sendMail({
+      to,
+      subject: 'Predict & Win Results - WattsUp Energy',
+      templatePath: join(__dirname, 'templates', 'prediction-bonus.hbs'),
+      context: {
+        name,
+        month: monthNames[month - 1],
+        year,
+        predictedKwh: predictedKwh.toFixed(2),
+        actualKwh: actualKwh.toFixed(2),
+        accuracy: accuracy.toFixed(2),
+        rewardTokens: rewardTokens.toFixed(2),
+        transactionHash,
+      },
+    });
+  }
   async sendCertificateGeneratedEmail(
     to: string,
     name: string,

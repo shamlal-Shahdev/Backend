@@ -14,6 +14,7 @@ import { VendorCompanyProfileModule } from '../company-profile/vendor-company-pr
 import { BlockchainModule } from '../../blockchain/blockchain.module';
 import { UserWalletModule } from '../../user-wallet/user-wallet.module';
 import { CertificateModule } from '../../certificate/certificate.module';
+import { PredictionModule } from '../../prediction/prediction.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CertificateModule } from '../../certificate/certificate.module';
     BlockchainModule,
     UserWalletModule,
     CertificateModule,
+    PredictionModule,
   ],
   controllers: [VendorUsageImportController],
   providers: [

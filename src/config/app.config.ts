@@ -49,6 +49,18 @@ class EnvironmentVariablesValidator {
   @IsNumber()
   @IsOptional()
   CARBON_CO2_KG_PER_KWH: number;
+  @IsNumber()
+  @IsOptional()
+  PREDICTION_REWARD_HIGH: number;
+  @IsNumber()
+  @IsOptional()
+  PREDICTION_REWARD_MEDIUM: number;
+  @IsNumber()
+  @IsOptional()
+  PREDICTION_REWARD_LOW: number;
+  @IsString()
+  @IsOptional()
+  PREDICTION_WINDOW_ALWAYS_OPEN: string;
 }
 export default registerAs<AppConfig>('app', () => {
   validateConfig(process.env, EnvironmentVariablesValidator);
@@ -76,5 +88,18 @@ export default registerAs<AppConfig>('app', () => {
     carbonCo2KgPerKwh: process.env.CARBON_CO2_KG_PER_KWH
       ? parseFloat(process.env.CARBON_CO2_KG_PER_KWH)
       : 0.05,
+    predictionRewardHigh: process.env.PREDICTION_REWARD_HIGH
+      ? parseFloat(process.env.PREDICTION_REWARD_HIGH)
+      : 100,
+    predictionRewardMedium: process.env.PREDICTION_REWARD_MEDIUM
+      ? parseFloat(process.env.PREDICTION_REWARD_MEDIUM)
+      : 50,
+    predictionRewardLow: process.env.PREDICTION_REWARD_LOW
+      ? parseFloat(process.env.PREDICTION_REWARD_LOW)
+      : 25,
+    predictionWindowAlwaysOpen:
+      process.env.PREDICTION_WINDOW_ALWAYS_OPEN !== undefined
+        ? process.env.PREDICTION_WINDOW_ALWAYS_OPEN === 'true'
+        : (process.env.NODE_ENV || 'development') !== 'production',
   };
 });

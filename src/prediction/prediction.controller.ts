@@ -12,6 +12,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,9 +27,16 @@ import { Roles } from '../roles/roles.decorator';
 import { RolesGuard } from '../roles/roles.guard';
 import { RoleEnum } from '../roles/roles.enum';
 import { PredictionService } from './prediction.service';
-import { CreatePredictionDto } from './dto/create-prediction.dto';
+import { SubmitPredictionDto } from './dto/submit-prediction.dto';
 import { UpdatePredictionDto } from './dto/update-prediction.dto';
 import { PredictionEntity } from './entity/prediction.entity';
+
+function parseUserId(req: { user: { id: string | number } }): number {
+  return typeof req.user.id === 'string'
+    ? parseInt(req.user.id, 10)
+    : req.user.id;
+}
+
 @ApiTags('Predictions')
 @Controller({
   path: 'predictions',
@@ -38,8 +46,29 @@ import { PredictionEntity } from './entity/prediction.entity';
 @ApiBearerAuth()
 export class PredictionController {
   constructor(private readonly predictionService: PredictionService) {}
+
+  @Get('status')
+  @ApiOperation({ summary: 'Get prediction window status and user eligibility' })
+  @Roles(RoleEnum.user)
+  getStatus(@Request() req: { user: { id: string | number } }) {
+    return this.predictionService.getStatus(parseUserId(req));
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get prediction history for the current user' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @Roles(RoleEnum.user)
+  findHistory(
+    @Request() req: { user: { id: string | number } },
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.predictionService.findHistory(parseUserId(req), page, limit);
+  }
+
   @Post()
-  @ApiOperation({ summary: 'Submit a new prediction' })
+  @ApiOperation({ summary: 'Submit a new prediction for the current month' })
   @ApiResponse({
     status: 201,
     description: 'Prediction submitted successfully',
@@ -47,13 +76,15 @@ export class PredictionController {
   })
   @Roles(RoleEnum.user)
   @HttpCode(HttpStatus.CREATED)
-  create(
-    @Body() createPredictionDto: CreatePredictionDto,
+  submit(
+    @Request() req: { user: { id: string | number } },
+    @Body() submitPredictionDto: SubmitPredictionDto,
   ): Promise<PredictionEntity> {
-    return this.predictionService.create(createPredictionDto);
+    return this.predictionService.submit(parseUserId(req), submitPredictionDto);
   }
+
   @Get()
-  @ApiOperation({ summary: 'Get all predictions with pagination' })
+  @ApiOperation({ summary: 'Get predictions with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({
@@ -63,11 +94,15 @@ export class PredictionController {
   })
   @Roles(RoleEnum.admin, RoleEnum.user)
   findAll(
+    @Request() req: { user: { id: string | number; role?: string } },
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    return this.predictionService.findAll(page, limit);
+    const userId =
+      req.user.role === 'admin' ? undefined : parseUserId(req);
+    return this.predictionService.findAll(page, limit, userId);
   }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a prediction by ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -78,11 +113,17 @@ export class PredictionController {
   })
   @ApiResponse({ status: 404, description: 'Prediction not found' })
   @Roles(RoleEnum.admin, RoleEnum.user)
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<PredictionEntity> {
-    return this.predictionService.findOne(id);
+  findOne(
+    @Request() req: { user: { id: string | number; role?: string } },
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<PredictionEntity> {
+    const userId =
+      req.user.role === 'admin' ? undefined : parseUserId(req);
+    return this.predictionService.findOne(id, userId);
   }
+
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a prediction' })
+  @ApiOperation({ summary: 'Update a prediction (admin only, evaluated only)' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
     status: 200,
@@ -97,6 +138,7 @@ export class PredictionController {
   ): Promise<PredictionEntity> {
     return this.predictionService.update(id, updatePredictionDto);
   }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a prediction' })
   @ApiParam({ name: 'id', type: Number })

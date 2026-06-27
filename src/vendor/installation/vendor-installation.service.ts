@@ -123,9 +123,13 @@ export class VendorInstallationService {
         );
       }
       installation.meterId = mid;
+      installation.isActive = true;
       if (!installation.verifiedAt) {
         installation.verifiedAt = new Date();
       }
+    }
+    if (updateStatusDto.status === InstallationStatus.REJECTED) {
+      installation.isActive = false;
     }
     const updated = await this.installationRepository.save(installation);
     this.logger.log(

@@ -138,9 +138,12 @@ export class DashboardService {
       amount?: number;
     }> = [];
     recentRewards.forEach((reward) => {
+      const isPrediction = reward.reason === RewardReason.PREDICTION_BONUS;
       allActivities.push({
-        type: 'tokens',
-        description: `Earned ${parseFloat(reward.tokensAmount.toString()).toFixed(2)} WATT from ${parseFloat(reward.kwhRewarded.toString()).toFixed(2)} kWh`,
+        type: isPrediction ? 'prediction' : 'tokens',
+        description: isPrediction
+          ? `Prediction bonus: ${parseFloat(reward.tokensAmount.toString()).toFixed(2)} WATT (${reward.usagePeriodYearMonth ?? 'monthly'})`
+          : `Earned ${parseFloat(reward.tokensAmount.toString()).toFixed(2)} WATT from ${parseFloat(reward.kwhRewarded.toString()).toFixed(2)} kWh`,
         date: reward.issuedAt,
         amount: parseFloat(reward.tokensAmount.toString()),
       });

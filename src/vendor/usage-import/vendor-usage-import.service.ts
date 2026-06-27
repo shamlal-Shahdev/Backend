@@ -24,6 +24,7 @@ import { WalletBalanceEntity } from '../../wallet-balance/entity/wallet-balance.
 import { TokenService } from '../../blockchain/token.service';
 import { UserWalletService } from '../../user-wallet/user-wallet.service';
 import { CertificateGenerationService } from '../../certificate/certificate-generation.service';
+import { PredictionEvaluationService } from '../../prediction/prediction-evaluation.service';
 import { VendorUsageImportParserService } from './vendor-usage-import-parser.service';
 import {
   VendorUsageImportBatchEntity,
@@ -57,6 +58,7 @@ export class VendorUsageImportService {
     private readonly tokenService: TokenService,
     private readonly userWalletService: UserWalletService,
     private readonly certificateGenerationService: CertificateGenerationService,
+    private readonly predictionEvaluationService: PredictionEvaluationService,
   ) {}
 
   getTokensPerKwh(): number {
@@ -402,6 +404,24 @@ export class VendorUsageImportService {
 
       await queryRunner.commitTransaction();
       await this.generateCertificatesForBatch(pendingCertificates);
+
+      const evaluationRows = rows
+        .filter(
+          (row) =>
+            row.installationId &&
+            row.status !== VendorUsageImportRowStatus.REJECTED,
+        )
+        .map((row) => ({
+          installationId: row.installationId!,
+          actualKwh: Number(row.totalKwh),
+        }));
+      if (evaluationRows.length > 0) {
+        await this.predictionEvaluationService.evaluateForPeriod(
+          batch.periodYearMonth,
+          evaluationRows,
+        );
+      }
+
       this.logger.log(
         `Vendor usage batch ${batchId} completed: credited=${acceptedCredited} skipped=${acceptedSkipped} rejected=${rejected} mintFailed=${mintFailed}`,
       );

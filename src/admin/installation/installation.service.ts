@@ -92,6 +92,12 @@ export class AdminInstallationService {
     ) {
       installation.verifiedAt = new Date();
     }
+    if (updateInstallationDto.status === InstallationStatus.COMPLETED) {
+      installation.isActive = true;
+    }
+    if (updateInstallationDto.status === InstallationStatus.REJECTED) {
+      installation.isActive = false;
+    }
     const updated = await this.installationRepository.save(installation);
     this.logger.log(`Installation request ${id} updated successfully`);
     return updated;

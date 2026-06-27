@@ -25,9 +25,11 @@ export class PredictionResultService {
         'Prediction result for this prediction already exists',
       );
     }
-    const predictionResult = this.predictionResultRepository.create(
-      createPredictionResultDto,
-    );
+    const predictionResult = this.predictionResultRepository.create({
+      actualKwh: createPredictionResultDto.actualKwh,
+      bonusAwarded: createPredictionResultDto.bonusAwarded ?? false,
+      predictionId: createPredictionResultDto.predictionId,
+    });
     return await this.predictionResultRepository.save(predictionResult);
   }
   async findAll(
