@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -149,6 +150,29 @@ export class WalletBalanceService {
     const walletBalance = await this.getOrCreateWalletBalance(userId);
     const currentBalance = parseFloat(walletBalance.balance.toString());
     walletBalance.balance = currentBalance + rewardAmount;
+    return await this.walletBalanceRepository.save(walletBalance);
+  }
+
+  async deductBalance(
+    userId: number,
+    amount: number,
+  ): Promise<WalletBalanceEntity> {
+    const walletBalance = await this.getOrCreateWalletBalance(userId);
+    const currentBalance = parseFloat(walletBalance.balance.toString());
+    if (currentBalance < amount) {
+      throw new BadRequestException('Insufficient wallet balance');
+    }
+    walletBalance.balance = currentBalance - amount;
+    return await this.walletBalanceRepository.save(walletBalance);
+  }
+
+  async addBalance(
+    userId: number,
+    amount: number,
+  ): Promise<WalletBalanceEntity> {
+    const walletBalance = await this.getOrCreateWalletBalance(userId);
+    const currentBalance = parseFloat(walletBalance.balance.toString());
+    walletBalance.balance = currentBalance + amount;
     return await this.walletBalanceRepository.save(walletBalance);
   }
 }

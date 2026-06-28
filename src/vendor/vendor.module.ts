@@ -7,6 +7,7 @@ import { VendorController } from './vendor.controller';
 import { UserEntity } from '../user/entity/user.entity';
 import { VendorUsageImportModule } from './usage-import/vendor-usage-import.module';
 import { VendorCompanyProfileModule } from './company-profile/vendor-company-profile.module';
+import { VendorCouponModule } from './coupon/vendor-coupon.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { VendorCompanyProfileModule } from './company-profile/vendor-company-pro
     VendorDashboardModule,
     VendorUsageImportModule,
     VendorCompanyProfileModule,
+    VendorCouponModule,
     TypeOrmModule.forFeature([UserEntity]),
   ],
   controllers: [VendorController],

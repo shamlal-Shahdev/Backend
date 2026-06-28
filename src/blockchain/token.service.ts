@@ -1,6 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
+import { UserWalletService } from '../user-wallet/user-wallet.service';
+import { WalletService } from './wallet.service';
 const WATTSUP_TOKEN_ABI = [
   'function name() view returns (string)',
   'function symbol() view returns (string)',
@@ -8,6 +10,7 @@ const WATTSUP_TOKEN_ABI = [
   'function totalSupply() view returns (uint256)',
   'function balanceOf(address account) view returns (uint256)',
   'function mint(address to, uint256 amount)',
+  'function transfer(address to, uint256 amount) returns (bool)',
 ];
 @Injectable()
 export class TokenService implements OnModuleInit {
@@ -17,7 +20,11 @@ export class TokenService implements OnModuleInit {
   private readonly token: ethers.Contract;
   private readonly rpcUrl: string;
   private readonly tokenAddress: string;
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly userWalletService: UserWalletService,
+    private readonly walletService: WalletService,
+  ) {
     const rpcUrl = this.configService.get<string>('HARDHAT_RPC_URL');
     const tokenAddress = this.configService.get<string>('TOKEN_ADDRESS');
     const treasuryPk = this.configService.get<string>('TREASURY_PRIVATE_KEY');
@@ -141,6 +148,67 @@ export class TokenService implements OnModuleInit {
       raw,
       formatted,
       decimals,
+    };
+  }
+
+  private async ensureGasForAddress(address: string): Promise<void> {
+    const balance = await this.provider.getBalance(address);
+    const minGas = ethers.parseEther('0.01');
+    if (balance < minGas) {
+      this.logger.log(`Funding gas for ${address}`);
+      const tx = await this.signer.sendTransaction({
+        to: address,
+        value: ethers.parseEther('0.1'),
+      });
+      await tx.wait();
+    }
+  }
+
+  async transferFromUser(
+    fromUserId: number,
+    toAddress: string,
+    amount: number,
+  ): Promise<{ txHash: string; blockNumber: number }> {
+    const walletEntity =
+      await this.userWalletService.findByUserIdWithPrivateKey(fromUserId);
+    if (!walletEntity?.encryptedPrivateKey) {
+      throw new BadRequestException(
+        `No on-chain wallet found for user ${fromUserId}. Complete KYC to receive a wallet.`,
+      );
+    }
+
+    const fromAddress = walletEntity.address;
+    await this.ensureGasForAddress(fromAddress);
+
+    const onChainBalance = await this.getUserBalance(fromAddress);
+    if (parseFloat(onChainBalance.formatted) < amount) {
+      throw new BadRequestException(
+        'Insufficient on-chain token balance for this purchase',
+      );
+    }
+
+    const privateKey = this.walletService.decryptPrivateKey(
+      walletEntity.encryptedPrivateKey,
+    );
+    const userSigner = new ethers.Wallet(privateKey, this.provider);
+    const decimals = Number(await this.token.decimals());
+    const tokenAmount = ethers.parseUnits(amount.toString(), decimals);
+    const tokenWithUserSigner = this.token.connect(userSigner) as ethers.Contract;
+
+    this.logger.log(
+      `Transferring ${amount} WATT from user ${fromUserId} (${fromAddress}) to ${toAddress}`,
+    );
+
+    const tx = await tokenWithUserSigner.transfer(toAddress, tokenAmount);
+    const receipt = await tx.wait();
+
+    this.logger.log(
+      `Transfer confirmed: tx=${tx.hash} block=${receipt.blockNumber}`,
+    );
+
+    return {
+      txHash: String(tx.hash),
+      blockNumber: Number(receipt.blockNumber),
     };
   }
 }

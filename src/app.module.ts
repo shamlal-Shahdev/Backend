@@ -40,6 +40,7 @@ import { GeocodeModule } from './geocode/geocode.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
+import { CouponModule } from './coupon/coupon.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
   .isDocumentDatabase
@@ -118,6 +119,7 @@ const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
     WalletBalanceModule,
     MarketplaceItemModule,
     RedemptionModule,
+    CouponModule,
     CertificateModule,
     PredictionModule,
     PredictionResultModule,
