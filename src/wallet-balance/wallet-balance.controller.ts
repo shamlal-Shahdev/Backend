@@ -70,7 +70,7 @@ export class WalletBalanceController {
     return this.walletBalanceService.findAll(page, limit);
   }
   @Get('my-balance')
-  @ApiOperation({ summary: 'Get current user wallet balance from database' })
+  @ApiOperation({ summary: 'Get current user spendable WATT balance' })
   @ApiResponse({
     status: 200,
     description: 'Wallet balance retrieved successfully',
@@ -80,11 +80,11 @@ export class WalletBalanceController {
   @Roles(RoleEnum.user)
   async getMyBalance(@Request() req): Promise<WalletBalanceEntity> {
     const user = req.user;
-    return await this.walletBalanceService.getOrCreateWalletBalance(user.id);
+    return await this.walletBalanceService.refreshBalanceFromLedger(user.id);
   }
   @Get('my-balance/sync')
   @ApiOperation({
-    summary: 'Sync current user wallet balance from blockchain',
+    summary: 'Sync current user wallet with blockchain (re-mints if needed)',
   })
   @ApiResponse({
     status: 200,

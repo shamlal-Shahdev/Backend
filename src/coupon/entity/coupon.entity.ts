@@ -17,6 +17,11 @@ export enum CouponStatus {
   DISABLED = 'disabled',
 }
 
+export enum CouponValueType {
+  AMOUNT = 'amount',
+  PERCENTAGE = 'percentage',
+}
+
 @Entity({ name: 'coupon' })
 export class CouponEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
@@ -34,6 +39,14 @@ export class CouponEntity extends EntityRelationalHelper {
   @Column({ name: 'coupon_value', type: 'decimal', precision: 18, scale: 2 })
   couponValue: number;
 
+  @Column({
+    name: 'value_type',
+    type: 'enum',
+    enum: CouponValueType,
+    default: CouponValueType.AMOUNT,
+  })
+  valueType: CouponValueType;
+
   @Column({ name: 'token_cost', type: 'decimal', precision: 18, scale: 8 })
   tokenCost: number;
 
@@ -45,6 +58,9 @@ export class CouponEntity extends EntityRelationalHelper {
 
   @Column({ name: 'terms_and_conditions', type: 'text' })
   termsAndConditions: string;
+
+  @Column({ name: 'redemption_code', type: 'varchar', length: 64, default: '' })
+  redemptionCode: string;
 
   @Column({ name: 'image_url', type: 'varchar', length: 500, nullable: true })
   imageUrl: string | null;

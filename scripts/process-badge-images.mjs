@@ -34,15 +34,39 @@ const USER_BADGES = {
 
 const ALL_LEVELS = ['bronze', 'silver', 'gold', 'platinum'];
 
-function isBackgroundPixel(r, g, b) {
-  if (r < 16 && g < 16 && b < 16) {
+/** Bronze/gold checkerboard preview — remove neutral grey/white, keep medal colour. */
+function isNeutralBackground(r, g, b, a) {
+  if (a < 8) {
     return true;
   }
-
+  if (r >= 248 && g >= 248 && b >= 248) {
+    return true;
+  }
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const saturation = max === 0 ? 0 : (max - min) / max;
+  if (saturation < 0.07 && min >= 175) {
+    return true;
+  }
+  return false;
+}
 
+function clearNeutralBackground(data) {
+  for (let i = 0; i < data.length; i += 4) {
+    if (isNeutralBackground(data[i], data[i + 1], data[i + 2], data[i + 3])) {
+      data[i + 3] = 0;
+    }
+  }
+}
+
+/** Silver uses a white page background — edge flood only, never global grey removal. */
+function isSilverOuterBackground(r, g, b, a) {
+  if (a < 8) {
+    return true;
+  }
+  if (r >= 250 && g >= 250 && b >= 250) {
+    return true;
+  }
   if (
     Math.abs(r - 204) <= 3 &&
     Math.abs(g - 204) <= 3 &&
@@ -50,23 +74,16 @@ function isBackgroundPixel(r, g, b) {
   ) {
     return true;
   }
-
-  if (r >= 248 && g >= 248 && b >= 248 && saturation < 0.03) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const saturation = max === 0 ? 0 : (max - min) / max;
+  if (r >= 248 && g >= 248 && b >= 248 && saturation < 0.02) {
     return true;
   }
-
-  if (min >= 245 && max - min <= 6 && saturation < 0.03) {
-    return true;
-  }
-
-  if (min >= 235 && max - min <= 20 && saturation < 0.08) {
-    return true;
-  }
-
   return false;
 }
 
-function floodClearFromEdges(data, width, height) {
+function clearSilverBackgroundFromEdges(data, width, height) {
   const visited = new Uint8Array(width * height);
   const queue = [];
 
@@ -79,7 +96,7 @@ function floodClearFromEdges(data, width, height) {
       return;
     }
     const offset = index * 4;
-    if (!isBackgroundPixel(data[offset], data[offset + 1], data[offset + 2])) {
+    if (!isSilverOuterBackground(data[offset], data[offset + 1], data[offset + 2], data[offset + 3])) {
       return;
     }
     visited[index] = 1;
@@ -107,65 +124,59 @@ function floodClearFromEdges(data, width, height) {
   }
 }
 
-function removeDetachedEdgeLines(data, width, height) {
-  const rowOpaqueCount = (y) => {
-    let count = 0;
-    for (let x = 0; x < width; x++) {
-      if (data[(y * width + x) * 4 + 3] > 10) {
-        count++;
-      }
+function rowOpaqueCount(data, width, y) {
+  let count = 0;
+  for (let x = 0; x < width; x++) {
+    if (data[(y * width + x) * 4 + 3] > 10) {
+      count++;
     }
-    return count;
-  };
+  }
+  return count;
+}
 
-  for (const edge of ['bottom', 'top']) {
-    let y = edge === 'bottom' ? height - 1 : 0;
-    while (y >= 0 && y < height) {
-      const opaqueCount = rowOpaqueCount(y);
-      if (opaqueCount < width * 0.5) {
-        break;
-      }
-
-      let gapRows = 0;
-      const step = edge === 'bottom' ? -1 : 1;
-      for (let scanY = y + step, i = 0; i < 20; scanY += step, i++) {
-        if (scanY < 0 || scanY >= height) {
-          break;
-        }
-        if (rowOpaqueCount(scanY) < width * 0.05) {
-          gapRows++;
-        } else {
-          break;
-        }
-      }
-
-      if (gapRows >= 5) {
-        for (let x = 0; x < width; x++) {
-          data[(y * width + x) * 4 + 3] = 0;
-        }
-        y += step;
-        continue;
-      }
-
-      break;
+function removeContentBelowSeal(data, width, height) {
+  let sealMaxY = -1;
+  for (let y = 0; y < height; y++) {
+    const opaqueCount = rowOpaqueCount(data, width, y);
+    if (opaqueCount >= width * 0.05 && opaqueCount < width * 0.72) {
+      sealMaxY = Math.max(sealMaxY, y);
+    }
+  }
+  if (sealMaxY < 0) {
+    return;
+  }
+  for (let y = sealMaxY + 1; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      data[(y * width + x) * 4 + 3] = 0;
     }
   }
 }
 
-async function processSeal(inputPath, outputPath) {
+async function processSeal(inputPath, outputPath, level) {
   const { data, info } = await sharp(inputPath)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  floodClearFromEdges(data, info.width, info.height);
-  removeDetachedEdgeLines(data, info.width, info.height);
+  if (level === 'silver') {
+    clearSilverBackgroundFromEdges(data, info.width, info.height);
+    removeContentBelowSeal(data, info.width, info.height);
+  } else {
+    clearNeutralBackground(data);
+  }
 
   await sharp(data, {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
     .trim()
-    .resize(320, 320, {
+    .extend({
+      top: 24,
+      bottom: 24,
+      left: 24,
+      right: 24,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .resize(360, 360, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
@@ -184,7 +195,6 @@ function syncSources() {
       copyFileSync(sourcePath, dest);
       continue;
     }
-
     const fallback = join(externalSource, `${level}.png`);
     if (existsSync(fallback)) {
       copyFileSync(fallback, dest);
@@ -194,13 +204,12 @@ function syncSources() {
 
 async function main() {
   syncSources();
-
   for (const level of ALL_LEVELS) {
     const input = join(sourceDir, `${level}.png`);
     if (!existsSync(input)) {
       throw new Error(`Missing badge source for ${level}.png`);
     }
-    await processSeal(input, join(outDir, `${level}.png`));
+    await processSeal(input, join(outDir, `${level}.png`), level);
     console.log(`Processed ${level}.png`);
   }
 }

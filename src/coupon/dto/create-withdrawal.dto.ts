@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsString, Min, IsNotEmpty } from 'class-validator';
 
 export class CreateWithdrawalDto {
-  @ApiProperty({ example: 10000 })
+  @ApiProperty({ example: 5000 })
   @IsNumber()
   @Min(1)
   amount: number;

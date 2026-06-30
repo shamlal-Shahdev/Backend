@@ -7,7 +7,9 @@ import {
   IsDateString,
   IsOptional,
   IsNotEmpty,
+  IsEnum,
 } from 'class-validator';
+import { CouponValueType } from '../entity/coupon.entity';
 
 export class CreateCouponDto {
   @ApiProperty({ example: 'Rs. 500 Voucher' })
@@ -24,6 +26,15 @@ export class CreateCouponDto {
   @IsNumber()
   @Min(0)
   couponValue: number;
+
+  @ApiPropertyOptional({
+    enum: CouponValueType,
+    default: CouponValueType.AMOUNT,
+    example: CouponValueType.AMOUNT,
+  })
+  @IsOptional()
+  @IsEnum(CouponValueType)
+  valueType?: CouponValueType;
 
   @ApiProperty({ example: 500 })
   @IsNumber()
@@ -43,6 +54,11 @@ export class CreateCouponDto {
   @IsString()
   @IsNotEmpty()
   termsAndConditions: string;
+
+  @ApiProperty({ example: 'SOLAR20', description: 'Redemption code shown to buyer after purchase' })
+  @IsString()
+  @IsNotEmpty()
+  redemptionCode: string;
 
   @ApiPropertyOptional({ example: 'https://example.com/coupon.png' })
   @IsOptional()

@@ -183,7 +183,7 @@ export class TokenService implements OnModuleInit {
     const onChainBalance = await this.getUserBalance(fromAddress);
     if (parseFloat(onChainBalance.formatted) < amount) {
       throw new BadRequestException(
-        'Insufficient on-chain token balance for this purchase',
+        'Insufficient WATT tokens for this purchase. Open Wallet and sync your balance, or earn more tokens first.',
       );
     }
 

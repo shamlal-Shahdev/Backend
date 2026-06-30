@@ -67,11 +67,13 @@ export class AdminMarketplaceController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ProcessWithdrawalDto,
   ) {
-    if (
-      dto.status !== WithdrawalStatus.APPROVED &&
-      dto.status !== WithdrawalStatus.REJECTED
-    ) {
-      throw new BadRequestException('Status must be approved or rejected');
+    const allowed = [
+      WithdrawalStatus.IN_PROGRESS,
+      WithdrawalStatus.APPROVED,
+      WithdrawalStatus.REJECTED,
+    ];
+    if (!allowed.includes(dto.status)) {
+      throw new BadRequestException('Invalid withdrawal status');
     }
     return this.couponService.processWithdrawal(id, dto.status);
   }

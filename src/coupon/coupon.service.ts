@@ -5,11 +5,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, MoreThan } from 'typeorm';
-import { randomBytes } from 'crypto';
+import { DataSource, Repository, MoreThan, In } from 'typeorm';
 import {
   CouponEntity,
   CouponStatus,
+  CouponValueType,
 } from './entity/coupon.entity';
 import {
   CouponPurchaseEntity,
@@ -29,7 +29,12 @@ import { TokenService } from '../blockchain/token.service';
 import { UserWalletService } from '../user-wallet/user-wallet.service';
 import { WalletService } from '../blockchain/wallet.service';
 
-const WITHDRAWAL_MINIMUM = 10000;
+const WITHDRAWAL_MINIMUM = 5000;
+
+const ACTIVE_WITHDRAWAL_STATUSES = [
+  WithdrawalStatus.PENDING,
+  WithdrawalStatus.IN_PROGRESS,
+];
 
 @Injectable()
 export class CouponService {
@@ -87,21 +92,17 @@ export class CouponService {
       title: coupon.title,
       description: coupon.description,
       couponValue: parseFloat(coupon.couponValue.toString()),
+      valueType: coupon.valueType ?? 'amount',
       tokenCost: parseFloat(coupon.tokenCost.toString()),
       quantity: coupon.quantity,
       expiryDate: coupon.expiryDate,
+      termsAndConditions: coupon.termsAndConditions,
       imageUrl: coupon.imageUrl,
       vendorName,
       vendorId: coupon.vendorId,
       status: coupon.status,
       createdAt: coupon.createdAt,
     };
-  }
-
-  private generateCouponCode(): string {
-    const segment = randomBytes(3).toString('hex').toUpperCase();
-    const segment2 = randomBytes(3).toString('hex').toUpperCase();
-    return `WUP-${segment}-${segment2}`;
   }
 
   private resolvePurchaseStatus(
@@ -125,15 +126,25 @@ export class CouponService {
     vendorId: number,
     dto: CreateCouponDto,
   ): Promise<CouponEntity> {
+    const valueType = dto.valueType ?? CouponValueType.AMOUNT;
+    if (
+      valueType === CouponValueType.PERCENTAGE &&
+      (dto.couponValue < 1 || dto.couponValue > 100)
+    ) {
+      throw new BadRequestException('Percentage must be between 1 and 100');
+    }
+
     const coupon = this.couponRepository.create({
       vendorId,
       title: dto.title,
       description: dto.description,
       couponValue: dto.couponValue,
+      valueType,
       tokenCost: dto.tokenCost,
       quantity: dto.quantity,
       expiryDate: new Date(dto.expiryDate),
       termsAndConditions: dto.termsAndConditions,
+      redemptionCode: dto.redemptionCode.trim(),
       imageUrl: dto.imageUrl ?? null,
       status: CouponStatus.ACTIVE,
     });
@@ -168,17 +179,21 @@ export class CouponService {
       throw new NotFoundException(`Coupon with ID ${id} not found`);
     }
     const vendorName = await this.getVendorName(coupon.vendorId);
-    return {
-      ...this.formatCouponListItem(coupon, vendorName),
-      termsAndConditions: coupon.termsAndConditions,
-    };
+    return this.formatCouponListItem(coupon, vendorName);
   }
 
   async purchaseCoupon(
     userId: number,
     couponId: number,
   ): Promise<{
-    purchase: CouponPurchaseEntity;
+    purchase: {
+      id: number;
+      tokensUsed: number;
+      purchaseDate: Date;
+      status: CouponPurchaseStatus;
+      txHash: string | null;
+      blockNumber: number | null;
+    };
     remainingBalance: number;
     vendorName: string;
     expiryDate: Date;
@@ -203,12 +218,15 @@ export class CouponService {
     if (coupon.quantity <= 0) {
       throw new BadRequestException('Coupon is out of stock');
     }
+    const redemptionCode = coupon.redemptionCode?.trim();
+    if (!redemptionCode) {
+      throw new BadRequestException('Coupon is not available for purchase');
+    }
 
     const tokenCost = parseFloat(coupon.tokenCost.toString());
 
-    const userBalance = await this.walletBalanceService.getOrCreateWalletBalance(
-      userId,
-    );
+    const userBalance =
+      await this.walletBalanceService.reconcileOnChainWithLedger(userId);
     if (parseFloat(userBalance.balance.toString()) < tokenCost) {
       throw new BadRequestException('Insufficient wallet balance');
     }
@@ -231,6 +249,10 @@ export class CouponService {
       if (!lockedCoupon || lockedCoupon.quantity <= 0) {
         throw new BadRequestException('Coupon is out of stock');
       }
+      const lockedCode = lockedCoupon.redemptionCode?.trim();
+      if (!lockedCode) {
+        throw new BadRequestException('Coupon is not available for purchase');
+      }
 
       const userWallet = await this.walletBalanceService.deductBalance(
         userId,
@@ -241,22 +263,11 @@ export class CouponService {
       lockedCoupon.quantity -= 1;
       await manager.save(lockedCoupon);
 
-      let couponCode = this.generateCouponCode();
-      let exists = await manager.findOne(CouponPurchaseEntity, {
-        where: { couponCode },
-      });
-      while (exists) {
-        couponCode = this.generateCouponCode();
-        exists = await manager.findOne(CouponPurchaseEntity, {
-          where: { couponCode },
-        });
-      }
-
       const purchase = manager.create(CouponPurchaseEntity, {
         userId,
         couponId: lockedCoupon.id,
         vendorId: lockedCoupon.vendorId,
-        couponCode,
+        couponCode: lockedCode,
         tokensUsed: tokenCost,
         txHash,
         blockNumber,
@@ -271,7 +282,14 @@ export class CouponService {
       );
 
       return {
-        purchase: savedPurchase,
+        purchase: {
+          id: savedPurchase.id,
+          tokensUsed: parseFloat(savedPurchase.tokensUsed.toString()),
+          purchaseDate: savedPurchase.purchaseDate,
+          status: savedPurchase.status,
+          txHash: savedPurchase.txHash,
+          blockNumber: savedPurchase.blockNumber,
+        },
         remainingBalance: parseFloat(userWallet.balance.toString()),
         vendorName,
         expiryDate: lockedCoupon.expiryDate,
@@ -304,6 +322,7 @@ export class CouponService {
           couponId: purchase.couponId,
           couponTitle: purchase.coupon.title,
           couponValue: parseFloat(purchase.coupon.couponValue.toString()),
+          valueType: purchase.coupon.valueType ?? 'amount',
           vendorName,
           couponCode: purchase.couponCode,
           purchaseDate: purchase.purchaseDate,
@@ -362,6 +381,7 @@ export class CouponService {
       title: coupon.title,
       description: coupon.description,
       couponValue: parseFloat(coupon.couponValue.toString()),
+      valueType: coupon.valueType ?? 'amount',
       tokenCost: parseFloat(coupon.tokenCost.toString()),
       quantity: coupon.quantity,
       sold: soldCounts[i],
@@ -369,6 +389,7 @@ export class CouponService {
       status: coupon.status,
       imageUrl: coupon.imageUrl,
       termsAndConditions: coupon.termsAndConditions,
+      redemptionCode: coupon.redemptionCode,
       createdAt: coupon.createdAt,
     }));
   }
@@ -387,6 +408,7 @@ export class CouponService {
     if (dto.title !== undefined) coupon.title = dto.title;
     if (dto.description !== undefined) coupon.description = dto.description;
     if (dto.couponValue !== undefined) coupon.couponValue = dto.couponValue;
+    if (dto.valueType !== undefined) coupon.valueType = dto.valueType;
     if (dto.tokenCost !== undefined) coupon.tokenCost = dto.tokenCost;
     if (dto.quantity !== undefined) coupon.quantity = dto.quantity;
     if (dto.expiryDate !== undefined) {
@@ -395,8 +417,20 @@ export class CouponService {
     if (dto.termsAndConditions !== undefined) {
       coupon.termsAndConditions = dto.termsAndConditions;
     }
+    if (dto.redemptionCode !== undefined) {
+      coupon.redemptionCode = dto.redemptionCode.trim();
+    }
     if (dto.imageUrl !== undefined) coupon.imageUrl = dto.imageUrl ?? null;
     if (dto.status !== undefined) coupon.status = dto.status;
+
+    const valueType = coupon.valueType ?? CouponValueType.AMOUNT;
+    if (
+      valueType === CouponValueType.PERCENTAGE &&
+      (coupon.couponValue < 1 || coupon.couponValue > 100)
+    ) {
+      throw new BadRequestException('Percentage must be between 1 and 100');
+    }
+
     return this.couponRepository.save(coupon);
   }
 
@@ -437,7 +471,10 @@ export class CouponService {
       vendorId,
     );
     const pendingWithdrawals = await this.withdrawalRepository.count({
-      where: { vendorId, status: WithdrawalStatus.PENDING },
+      where: {
+        vendorId,
+        status: In(ACTIVE_WITHDRAWAL_STATUSES),
+      },
     });
     return {
       totalCoupons,
@@ -452,15 +489,20 @@ export class CouponService {
       vendorId,
     );
     const balance = parseFloat(wallet.balance.toString());
-    const pendingWithdrawals = await this.withdrawalRepository.find({
-      where: { vendorId, status: WithdrawalStatus.PENDING },
+    const activeWithdrawals = await this.withdrawalRepository.find({
+      where: {
+        vendorId,
+        status: In(ACTIVE_WITHDRAWAL_STATUSES),
+      },
       order: { createdAt: 'DESC' },
     });
+    const hasActiveWithdrawal = activeWithdrawals.length > 0;
     return {
       balance,
-      canWithdraw: balance >= WITHDRAWAL_MINIMUM,
+      canWithdraw: balance >= WITHDRAWAL_MINIMUM && !hasActiveWithdrawal,
       withdrawalMinimum: WITHDRAWAL_MINIMUM,
-      pendingWithdrawals,
+      hasActiveWithdrawal,
+      pendingWithdrawals: activeWithdrawals,
     };
   }
 
@@ -474,18 +516,21 @@ export class CouponService {
     const balance = parseFloat(wallet.balance.toString());
     if (balance < WITHDRAWAL_MINIMUM) {
       throw new BadRequestException(
-        `Minimum balance of ${WITHDRAWAL_MINIMUM} tokens required for withdrawal`,
+        `Insufficient balance. Minimum ${WITHDRAWAL_MINIMUM.toLocaleString()} tokens required for withdrawal`,
       );
     }
     if (dto.amount > balance) {
-      throw new BadRequestException('Withdrawal amount exceeds wallet balance');
+      throw new BadRequestException('Insufficient balance for this withdrawal amount');
     }
-    const pending = await this.withdrawalRepository.count({
-      where: { vendorId, status: WithdrawalStatus.PENDING },
+    const active = await this.withdrawalRepository.count({
+      where: {
+        vendorId,
+        status: In(ACTIVE_WITHDRAWAL_STATUSES),
+      },
     });
-    if (pending > 0) {
+    if (active > 0) {
       throw new BadRequestException(
-        'You already have a pending withdrawal request',
+        'You already have an active withdrawal request in progress',
       );
     }
     const request = this.withdrawalRepository.create({
@@ -515,7 +560,7 @@ export class CouponService {
       .select('COALESCE(SUM(p.tokens_used), 0)', 'total')
       .getRawOne();
     const pendingWithdrawRequests = await this.withdrawalRepository.count({
-      where: { status: WithdrawalStatus.PENDING },
+      where: { status: In(ACTIVE_WITHDRAWAL_STATUSES) },
     });
     return {
       totalCoupons,
@@ -581,7 +626,10 @@ export class CouponService {
 
   async processWithdrawal(
     withdrawalId: number,
-    status: WithdrawalStatus.APPROVED | WithdrawalStatus.REJECTED,
+    status:
+      | WithdrawalStatus.IN_PROGRESS
+      | WithdrawalStatus.APPROVED
+      | WithdrawalStatus.REJECTED,
   ): Promise<WithdrawalRequestEntity> {
     const request = await this.withdrawalRepository.findOne({
       where: { id: withdrawalId },
@@ -589,15 +637,38 @@ export class CouponService {
     if (!request) {
       throw new NotFoundException('Withdrawal request not found');
     }
-    if (request.status !== WithdrawalStatus.PENDING) {
-      throw new BadRequestException('Withdrawal request already processed');
+
+    const allowedTransitions: Partial<
+      Record<WithdrawalStatus, WithdrawalStatus[]>
+    > = {
+      [WithdrawalStatus.PENDING]: [
+        WithdrawalStatus.IN_PROGRESS,
+        WithdrawalStatus.REJECTED,
+      ],
+      [WithdrawalStatus.IN_PROGRESS]: [
+        WithdrawalStatus.APPROVED,
+        WithdrawalStatus.REJECTED,
+      ],
+    };
+
+    const nextStatuses = allowedTransitions[request.status] ?? [];
+    if (!nextStatuses.includes(status)) {
+      throw new BadRequestException(
+        `Cannot change status from ${request.status} to ${status}`,
+      );
     }
+
     if (status === WithdrawalStatus.APPROVED) {
       const amount = parseFloat(request.amount.toString());
       await this.walletBalanceService.deductBalance(request.vendorId, amount);
+      request.processedAt = new Date();
     }
+
+    if (status === WithdrawalStatus.REJECTED) {
+      request.processedAt = new Date();
+    }
+
     request.status = status;
-    request.processedAt = new Date();
     return this.withdrawalRepository.save(request);
   }
 }

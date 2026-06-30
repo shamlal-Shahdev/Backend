@@ -11,6 +11,7 @@ import { UserEntity } from '../../user/entity/user.entity';
 
 export enum WithdrawalStatus {
   PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
   APPROVED = 'approved',
   REJECTED = 'rejected',
 }

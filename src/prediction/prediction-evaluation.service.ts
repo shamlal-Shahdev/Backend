@@ -26,6 +26,8 @@ export type InstallationActualKwh = {
 @Injectable()
 export class PredictionEvaluationService {
   private readonly logger = new Logger(PredictionEvaluationService.name);
+  private readonly evaluationLocks = new Map<string, Promise<void>>();
+  private readonly userReconcileLocks = new Map<number, Promise<void>>();
 
   constructor(
     @InjectRepository(PredictionEntity)
@@ -132,6 +134,23 @@ export class PredictionEvaluationService {
   }
 
   async reconcileLockedPredictionsForUser(userId: number): Promise<void> {
+    const inFlight = this.userReconcileLocks.get(userId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const promise = this.doReconcileLockedPredictionsForUser(userId).finally(
+      () => {
+        this.userReconcileLocks.delete(userId);
+      },
+    );
+    this.userReconcileLocks.set(userId, promise);
+    return promise;
+  }
+
+  private async doReconcileLockedPredictionsForUser(
+    userId: number,
+  ): Promise<void> {
     const locked = await this.predictionRepository.find({
       where: { userId, status: PredictionStatus.LOCKED },
     });
@@ -171,7 +190,85 @@ export class PredictionEvaluationService {
     return null;
   }
 
+  private evaluationKey(
+    installationId: number,
+    year: number,
+    month: number,
+  ): string {
+    return `${installationId}:${year}:${month}`;
+  }
+
+  private async withEvaluationLock(
+    installationId: number,
+    year: number,
+    month: number,
+    fn: () => Promise<void>,
+  ): Promise<void> {
+    const key = this.evaluationKey(installationId, year, month);
+    const inFlight = this.evaluationLocks.get(key);
+    if (inFlight) {
+      await inFlight.catch(() => undefined);
+      await fn();
+      return;
+    }
+
+    const promise = fn().finally(() => {
+      this.evaluationLocks.delete(key);
+    });
+    this.evaluationLocks.set(key, promise);
+    await promise;
+  }
+
+  private isDeadlockError(err: unknown): boolean {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = (err as { code?: string })?.code;
+    return (
+      message.includes('Deadlock') ||
+      code === 'ER_LOCK_DEADLOCK' ||
+      code === '40001'
+    );
+  }
+
+  private async withDeadlockRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+  ): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastError = err;
+        if (!this.isDeadlockError(err) || attempt === maxAttempts) {
+          throw err;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+      }
+    }
+    throw lastError;
+  }
+
   private async evaluateInstallationPrediction(
+    installationId: number,
+    year: number,
+    month: number,
+    actualKwh: number,
+    periodYearMonth: string,
+  ): Promise<void> {
+    await this.withEvaluationLock(installationId, year, month, async () => {
+      await this.withDeadlockRetry(() =>
+        this.persistEvaluation(
+          installationId,
+          year,
+          month,
+          actualKwh,
+          periodYearMonth,
+        ),
+      );
+    });
+  }
+
+  private async persistEvaluation(
     installationId: number,
     year: number,
     month: number,
@@ -197,24 +294,50 @@ export class PredictionEvaluationService {
     const rewardTokens = this.getRewardForAccuracy(accuracy);
     const bonusAwarded = rewardTokens > 0;
 
+    let minted: { txHash: string; blockNumber: number } | null = null;
+    if (bonusAwarded) {
+      minted = await this.mintRewardForUser(prediction.userId, rewardTokens);
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const lockedPrediction = await queryRunner.manager.findOne(
+        PredictionEntity,
+        {
+          where: { id: prediction.id, status: PredictionStatus.LOCKED },
+          relations: ['user'],
+          lock: { mode: 'pessimistic_write' },
+        },
+      );
+
+      if (!lockedPrediction) {
+        await queryRunner.commitTransaction();
+        return;
+      }
+
+      const existingResult = await queryRunner.manager.findOne(
+        PredictionResultEntity,
+        { where: { predictionId: prediction.id } },
+      );
+      if (existingResult) {
+        if (lockedPrediction.status !== PredictionStatus.EVALUATED) {
+          lockedPrediction.status = PredictionStatus.EVALUATED;
+          await queryRunner.manager.save(lockedPrediction);
+        }
+        await queryRunner.commitTransaction();
+        return;
+      }
+
       let rewardTransactionId: number | null = null;
-      let txHash: string | null = null;
+      const txHash = minted?.txHash ?? null;
 
-      if (bonusAwarded) {
-        const minted = await this.mintRewardForUser(
-          prediction.userId,
-          rewardTokens,
-        );
-        txHash = minted.txHash;
-
+      if (bonusAwarded && minted) {
         const reward = queryRunner.manager.create(RewardTransactionEntity, {
-          userId: prediction.userId,
-          installationId: prediction.installationId,
+          userId: lockedPrediction.userId,
+          installationId: lockedPrediction.installationId,
           tokensAmount: rewardTokens,
           tokensPerKwh: 0,
           kwhRewarded: actualKwh,
@@ -236,12 +359,12 @@ export class PredictionEvaluationService {
 
         await this.reconcileWalletBalanceFromRewards(
           queryRunner.manager,
-          prediction.userId,
+          lockedPrediction.userId,
         );
       }
 
       const result = queryRunner.manager.create(PredictionResultEntity, {
-        predictionId: prediction.id,
+        predictionId: lockedPrediction.id,
         actualKwh,
         accuracyPercent: accuracy,
         rewardTokens,
@@ -250,15 +373,15 @@ export class PredictionEvaluationService {
       });
       await queryRunner.manager.save(result);
 
-      prediction.status = PredictionStatus.EVALUATED;
-      await queryRunner.manager.save(prediction);
+      lockedPrediction.status = PredictionStatus.EVALUATED;
+      await queryRunner.manager.save(lockedPrediction);
 
       await queryRunner.commitTransaction();
 
-      if (prediction.user?.email) {
+      if (lockedPrediction.user?.email) {
         await this.emailService.sendPredictionBonusEmail(
-          prediction.user.email,
-          prediction.user.name,
+          lockedPrediction.user.email,
+          lockedPrediction.user.name,
           month,
           year,
           predictedKwh,

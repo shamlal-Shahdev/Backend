@@ -202,12 +202,12 @@ export class CertificatePdfService {
       achievementLevel: AchievementLevel;
     },
   ): number {
-    const headerHeight = 132;
-    const titleY = 48;
+    const headerHeight = 140;
+    const titleY = 52;
     const titleSize = 20;
-    const badgeSize = 58;
-    const badgeX = options.pageWidth - options.margin - badgeSize;
-    const badgeY = titleY + Math.round((titleSize - badgeSize) / 2);
+    const badgeBox = 72;
+    const badgeX = options.pageWidth - options.margin - badgeBox;
+    const badgeY = Math.round((headerHeight - badgeBox) / 2);
 
     doc.save();
     doc.rect(0, 0, options.pageWidth, headerHeight).fill(COLORS.primary);
@@ -254,14 +254,15 @@ export class CertificatePdfService {
     if (badgePath) {
       try {
         doc.image(badgePath, badgeX, badgeY, {
-          width: badgeSize,
-          height: badgeSize,
+          fit: [badgeBox, badgeBox],
+          align: 'center',
+          valign: 'center',
         });
       } catch {
-        this.drawFallbackBadge(doc, badgeX, badgeY, badgeSize, options.achievementLevel);
+        this.drawFallbackBadge(doc, badgeX, badgeY, badgeBox, options.achievementLevel);
       }
     } else {
-      this.drawFallbackBadge(doc, badgeX, badgeY, badgeSize, options.achievementLevel);
+      this.drawFallbackBadge(doc, badgeX, badgeY, badgeBox, options.achievementLevel);
     }
 
     return headerHeight;

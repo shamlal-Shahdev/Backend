@@ -115,8 +115,7 @@ export class PredictionService {
 
     let message: string;
     if (alwaysOpen) {
-      message =
-        'Prediction window is open for testing. (Production: 1st–3rd of each month only.)';
+      message = `Prediction window is open until the ${this.WINDOW_END_DAY}${this.ordinalSuffix(this.WINDOW_END_DAY)} of this month.`;
     } else if (isOpen) {
       message = `Prediction window is open until the ${this.WINDOW_END_DAY}${this.ordinalSuffix(this.WINDOW_END_DAY)} of this month.`;
     } else if (currentDay < this.WINDOW_START_DAY) {
@@ -276,9 +275,6 @@ export class PredictionService {
     page: number = 1,
     limit: number = 10,
   ): Promise<{ data: PredictionEntity[]; total: number; page: number; limit: number }> {
-    await this.predictionEvaluationService.reconcileLockedPredictionsForUser(
-      userId,
-    );
     return this.findAll(page, limit, userId);
   }
 
