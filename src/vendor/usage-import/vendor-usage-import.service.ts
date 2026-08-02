@@ -67,6 +67,13 @@ export class VendorUsageImportService {
     })!;
   }
 
+  private getCurrentPeriodYearMonth(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
   async createFromUpload(
     vendorUserId: number,
     periodYearMonth: string,
@@ -74,6 +81,12 @@ export class VendorUsageImportService {
   ): Promise<VendorUsageImportBatchEntity> {
     if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
+    }
+    const currentPeriod = this.getCurrentPeriodYearMonth();
+    if (periodYearMonth !== currentPeriod) {
+      throw new BadRequestException(
+        `Only usage for the current month (${currentPeriod}) can be uploaded.`,
+      );
     }
     const ext = this.extensionOf(file.originalname);
     if (ext !== 'csv' && ext !== 'xlsx') {

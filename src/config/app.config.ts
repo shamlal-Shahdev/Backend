@@ -90,13 +90,13 @@ export default registerAs<AppConfig>('app', () => {
       : 0.05,
     predictionRewardHigh: process.env.PREDICTION_REWARD_HIGH
       ? parseFloat(process.env.PREDICTION_REWARD_HIGH)
-      : 100,
+      : 5,
     predictionRewardMedium: process.env.PREDICTION_REWARD_MEDIUM
       ? parseFloat(process.env.PREDICTION_REWARD_MEDIUM)
-      : 50,
+      : 5,
     predictionRewardLow: process.env.PREDICTION_REWARD_LOW
       ? parseFloat(process.env.PREDICTION_REWARD_LOW)
-      : 25,
+      : 3,
     predictionWindowAlwaysOpen:
       process.env.PREDICTION_WINDOW_ALWAYS_OPEN !== undefined
         ? process.env.PREDICTION_WINDOW_ALWAYS_OPEN === 'true'
