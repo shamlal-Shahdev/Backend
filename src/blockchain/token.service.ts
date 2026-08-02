@@ -153,12 +153,12 @@ export class TokenService implements OnModuleInit {
 
   private async ensureGasForAddress(address: string): Promise<void> {
     const balance = await this.provider.getBalance(address);
-    const minGas = ethers.parseEther('0.01');
+    const minGas = ethers.parseEther('0.001');
     if (balance < minGas) {
       this.logger.log(`Funding gas for ${address}`);
       const tx = await this.signer.sendTransaction({
         to: address,
-        value: ethers.parseEther('0.1'),
+        value: ethers.parseEther('0.005'),
       });
       await tx.wait();
     }

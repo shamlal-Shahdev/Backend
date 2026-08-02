@@ -30,6 +30,16 @@ export class RedemptionEntity extends EntityRelationalHelper {
     default: RedemptionStatus.PENDING,
   })
   status: RedemptionStatus;
+
+  @Column({ name: 'tx_hash', type: 'varchar', length: 128, nullable: true })
+  txHash: string | null;
+
+  @Column({ name: 'block_number', type: 'int', nullable: true })
+  blockNumber: number | null;
+
+  @Column({ name: 'tokens_used', type: 'decimal', precision: 18, scale: 8, nullable: true })
+  tokensUsed: number | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
   @ManyToOne(() => UserEntity, (user) => user.redemptions, {

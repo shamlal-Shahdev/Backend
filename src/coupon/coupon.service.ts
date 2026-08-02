@@ -624,6 +624,24 @@ export class CouponService {
     );
   }
 
+  async getVendorTransactions(vendorId: number): Promise<unknown[]> {
+    const transactions = await this.purchaseRepository.find({
+      where: { vendorId },
+      relations: ['user', 'coupon'],
+      order: { purchaseDate: 'DESC' },
+    });
+    
+    return transactions.map(t => ({
+      id: t.id,
+      purchaseDate: t.purchaseDate,
+      userName: t.user?.name ?? 'Unknown User',
+      couponTitle: t.coupon?.title ?? 'Unknown Coupon',
+      tokensUsed: parseFloat(t.tokensUsed.toString()),
+      txHash: t.txHash,
+      status: t.status,
+    }));
+  }
+
   async processWithdrawal(
     withdrawalId: number,
     status:

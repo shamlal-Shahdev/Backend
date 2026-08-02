@@ -93,7 +93,7 @@ export default registerAs<AppConfig>('app', () => {
       : 5,
     predictionRewardMedium: process.env.PREDICTION_REWARD_MEDIUM
       ? parseFloat(process.env.PREDICTION_REWARD_MEDIUM)
-      : 5,
+      : 7,
     predictionRewardLow: process.env.PREDICTION_REWARD_LOW
       ? parseFloat(process.env.PREDICTION_REWARD_LOW)
       : 3,

@@ -60,6 +60,12 @@ export class VendorCouponController {
     return this.couponService.createCoupon(parseVendorId(req), dto);
   }
 
+  @Get('transactions')
+  @ApiOperation({ summary: 'Get vendor transactions' })
+  getTransactions(@Request() req: { user: { id: string | number } }) {
+    return this.couponService.getVendorTransactions(parseVendorId(req));
+  }
+
   @Get('coupons')
   @ApiOperation({ summary: 'List vendor coupons' })
   findAll(@Request() req: { user: { id: string | number } }) {
