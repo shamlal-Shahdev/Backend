@@ -54,6 +54,34 @@ export class UserWalletService {
     return w?.address ?? null;
   }
 
+  async connectWalletForUser(
+    userId: number,
+    rawAddress: string,
+  ): Promise<UserWalletEntity> {
+    const address = rawAddress.trim();
+    const existingAddressUser = await this.userWalletRepository.findOne({
+      where: { address },
+    });
+    if (existingAddressUser && existingAddressUser.userId !== userId) {
+      throw new ConflictException(
+        'This wallet address is already connected to another account',
+      );
+    }
+
+    let userWallet = await this.findByUserId(userId);
+    if (userWallet) {
+      userWallet.address = address;
+      return this.userWalletRepository.save(userWallet);
+    }
+
+    userWallet = this.userWalletRepository.create({
+      userId,
+      address,
+      encryptedPrivateKey: null,
+    });
+    return this.userWalletRepository.save(userWallet);
+  }
+
   /** Internal: loads encrypted private key for signing / rewards. */
   async findByUserIdWithPrivateKey(
     userId: number,
@@ -65,3 +93,4 @@ export class UserWalletService {
       .getOne();
   }
 }
+

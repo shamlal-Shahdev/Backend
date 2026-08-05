@@ -337,6 +337,7 @@ export class VendorUsageImportService {
             }
           }
           row.rewardTransactionId = existingReward.id;
+          row.txHash = existingReward.txHash;
           await queryRunner.manager.save(row);
           affectedUserIds.add(installation.userId);
           acceptedSkipped++;
@@ -392,6 +393,7 @@ export class VendorUsageImportService {
         affectedUserIds.add(installation.userId);
 
         row.rewardTransactionId = savedReward.id;
+        row.txHash = mintTxHash;
         await queryRunner.manager.save(row);
         pendingCertificates.push({
           rewardTransactionId: savedReward.id,

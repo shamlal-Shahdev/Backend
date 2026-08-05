@@ -89,19 +89,9 @@ export class AdminKycService {
     }
     await this.kycRepository.save(kycDocuments);
 
-    let wallet = await this.userWalletService.findByUserId(userId);
-    if (!wallet) {
-      const { address, encryptedPrivateKey } =
-        this.walletService.createWallet();
-      wallet = await this.userWalletService.createForUser(
-        userId,
-        address,
-        encryptedPrivateKey,
-      );
-      this.logger.log(`Created blockchain wallet for user ${userId}: ${address}`);
-    }
     await this.walletBalanceService.getOrCreateWalletBalance(userId);
     this.logger.log(`Ensured wallet balance record for user ${userId}`);
+
 
     try {
       await this.emailService.sendKycApprovalEmail(

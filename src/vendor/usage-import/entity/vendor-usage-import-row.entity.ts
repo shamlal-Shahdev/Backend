@@ -49,6 +49,9 @@ export class VendorUsageImportRowEntity extends EntityRelationalHelper {
   @Column({ name: 'reward_transaction_id', type: 'int', nullable: true })
   rewardTransactionId: number | null;
 
+  @Column({ name: 'tx_hash', type: 'varchar', length: 128, nullable: true })
+  txHash: string | null;
+
   @ManyToOne(() => VendorUsageImportBatchEntity, (batch) => batch.rows, {
     onDelete: 'CASCADE',
   })

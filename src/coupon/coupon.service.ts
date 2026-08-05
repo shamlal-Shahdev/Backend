@@ -59,21 +59,15 @@ export class CouponService {
   ) {}
 
   private async ensureOnChainWallet(userId: number): Promise<string> {
-    let wallet = await this.userWalletService.findByUserId(userId);
-    if (!wallet) {
-      const { address, encryptedPrivateKey } =
-        this.walletService.createWallet();
-      wallet = await this.userWalletService.createForUser(
-        userId,
-        address,
-        encryptedPrivateKey,
-      );
-      this.logger.log(
-        `Created on-chain wallet for user ${userId}: ${address}`,
+    const wallet = await this.userWalletService.findByUserId(userId);
+    if (!wallet || !wallet.address) {
+      throw new BadRequestException(
+        'No connected wallet found. Please connect your MetaMask wallet in the Wallet section first.',
       );
     }
     return wallet.address;
   }
+
 
   private async getVendorName(vendorId: number): Promise<string> {
     const profile = await this.vendorProfileRepository.findOne({
