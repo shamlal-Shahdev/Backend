@@ -3,7 +3,7 @@ import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class ConnectWalletDto {
   @ApiProperty({
-    description: 'Ethereum public wallet address from MetaMask (0x...)',
+    description: 'Ethereum public wallet address (0x...)',
     example: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
   })
   @IsNotEmpty()

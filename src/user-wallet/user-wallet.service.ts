@@ -92,5 +92,29 @@ export class UserWalletService {
       .where('w.user_id = :userId', { userId })
       .getOne();
   }
+
+  async getOrCreateWalletForUser(
+    userId: number,
+    createWalletFn: () => { address: string; encryptedPrivateKey: string },
+  ): Promise<UserWalletEntity> {
+    let wallet = await this.findByUserIdWithPrivateKey(userId);
+    if (!wallet || !wallet.address || !wallet.encryptedPrivateKey) {
+      const generated = createWalletFn();
+      if (!wallet) {
+        wallet = this.userWalletRepository.create({
+          userId,
+          address: generated.address,
+          encryptedPrivateKey: generated.encryptedPrivateKey,
+        });
+      } else {
+        if (!wallet.address) wallet.address = generated.address;
+        if (!wallet.encryptedPrivateKey) {
+          wallet.encryptedPrivateKey = generated.encryptedPrivateKey;
+        }
+      }
+      wallet = await this.userWalletRepository.save(wallet);
+    }
+    return wallet;
+  }
 }
 

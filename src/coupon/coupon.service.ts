@@ -59,12 +59,10 @@ export class CouponService {
   ) {}
 
   private async ensureOnChainWallet(userId: number): Promise<string> {
-    const wallet = await this.userWalletService.findByUserId(userId);
-    if (!wallet || !wallet.address) {
-      throw new BadRequestException(
-        'No connected wallet found. Please connect your MetaMask wallet in the Wallet section first.',
-      );
-    }
+    const wallet = await this.userWalletService.getOrCreateWalletForUser(
+      userId,
+      () => this.walletService.createWallet(),
+    );
     return wallet.address;
   }
 

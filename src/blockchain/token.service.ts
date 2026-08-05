@@ -169,11 +169,12 @@ export class TokenService implements OnModuleInit {
     toAddress: string,
     amount: number,
   ): Promise<{ txHash: string; blockNumber: number }> {
-    const walletEntity =
+    let walletEntity =
       await this.userWalletService.findByUserIdWithPrivateKey(fromUserId);
     if (!walletEntity?.encryptedPrivateKey) {
-      throw new BadRequestException(
-        `No on-chain wallet found for user ${fromUserId}. Complete KYC to receive a wallet.`,
+      walletEntity = await this.userWalletService.getOrCreateWalletForUser(
+        fromUserId,
+        () => this.walletService.createWallet(),
       );
     }
 
@@ -184,6 +185,12 @@ export class TokenService implements OnModuleInit {
     if (parseFloat(onChainBalance.formatted) < amount) {
       throw new BadRequestException(
         'Insufficient WATT tokens for this purchase. Open Wallet and sync your balance, or earn more tokens first.',
+      );
+    }
+
+    if (!walletEntity.encryptedPrivateKey) {
+      throw new BadRequestException(
+        `Failed to resolve wallet private key for user ${fromUserId}`,
       );
     }
 

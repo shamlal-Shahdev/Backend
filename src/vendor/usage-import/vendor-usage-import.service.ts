@@ -22,6 +22,7 @@ import {
 import { TokenMintEventEntity } from '../../token-mint-event/entity/token-mint-event.entity';
 import { WalletBalanceEntity } from '../../wallet-balance/entity/wallet-balance.entity';
 import { TokenService } from '../../blockchain/token.service';
+import { WalletService } from '../../blockchain/wallet.service';
 import { UserWalletService } from '../../user-wallet/user-wallet.service';
 import { CertificateGenerationService } from '../../certificate/certificate-generation.service';
 import { PredictionEvaluationService } from '../../prediction/prediction-evaluation.service';
@@ -56,6 +57,7 @@ export class VendorUsageImportService {
     private readonly parser: VendorUsageImportParserService,
     private readonly configService: ConfigService<AllConfigType>,
     private readonly tokenService: TokenService,
+    private readonly walletService: WalletService,
     private readonly userWalletService: UserWalletService,
     private readonly certificateGenerationService: CertificateGenerationService,
     private readonly predictionEvaluationService: PredictionEvaluationService,
@@ -491,12 +493,11 @@ export class VendorUsageImportService {
     userId: number,
     rewardAmount: number,
   ): Promise<{ txHash: string; blockNumber: number }> {
-    const walletAddress =
-      await this.userWalletService.getWalletAddressForUser(userId);
-    if (!walletAddress || walletAddress.trim().length === 0) {
-      throw new BadRequestException(`No wallet address found for user ${userId}`);
-    }
-    return this.tokenService.mintTo(walletAddress, rewardAmount);
+    const wallet = await this.userWalletService.getOrCreateWalletForUser(
+      userId,
+      () => this.walletService.createWallet(),
+    );
+    return this.tokenService.mintTo(wallet.address, rewardAmount);
   }
 
   private async ensureTokenMintEvent(

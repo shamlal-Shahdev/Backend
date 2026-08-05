@@ -47,10 +47,10 @@ export class UserWalletController {
   }
 
   @Post('connect')
-  @ApiOperation({ summary: 'Connect/Save MetaMask public wallet address' })
+  @ApiOperation({ summary: 'Connect/Save public wallet address' })
   @ApiResponse({
     status: 201,
-    description: 'MetaMask wallet connected successfully',
+    description: 'Wallet connected successfully',
     type: UserWalletEntity,
   })
   @Roles(RoleEnum.user, RoleEnum.admin)
