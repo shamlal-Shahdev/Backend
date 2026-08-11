@@ -95,17 +95,26 @@ export class VendorUsageImportService {
       throw new BadRequestException('Only .csv and .xlsx files are allowed');
     }
 
-    const existingCompleted = await this.batchRepository.findOne({
+    const existingActive = await this.batchRepository.findOne({
       where: {
         vendorUserId,
         periodYearMonth,
-        status: VendorUsageImportBatchStatus.COMPLETED,
+        status: In([
+          VendorUsageImportBatchStatus.COMPLETED,
+          VendorUsageImportBatchStatus.PROCESSING,
+        ]),
       },
     });
-    if (existingCompleted) {
-      throw new ConflictException(
-        `Usage for ${periodYearMonth} is already finalized. Contact support to replace a file.`,
-      );
+    if (existingActive) {
+      if (existingActive.status === VendorUsageImportBatchStatus.COMPLETED) {
+        throw new ConflictException(
+          `Usage for ${periodYearMonth} is already finalized. Contact support to replace a file.`,
+        );
+      } else {
+        throw new ConflictException(
+          `Usage for ${periodYearMonth} is currently processing. Please wait.`,
+        );
+      }
     }
 
     await this.batchRepository.delete({
@@ -343,6 +352,12 @@ export class VendorUsageImportService {
           await queryRunner.manager.save(row);
           affectedUserIds.add(installation.userId);
           acceptedSkipped++;
+          
+          pendingCertificates.push({
+            rewardTransactionId: existingReward.id,
+            installationId: installation.id,
+          });
+
           continue;
         }
 
@@ -420,23 +435,31 @@ export class VendorUsageImportService {
       await queryRunner.manager.save(batch);
 
       await queryRunner.commitTransaction();
-      await this.generateCertificatesForBatch(pendingCertificates);
+      try {
+        await this.generateCertificatesForBatch(pendingCertificates);
+      } catch (err) {
+        this.logger.error(`Batch ${batchId}: failed to generate certificates: ${err instanceof Error ? err.message : String(err)}`);
+      }
 
-      const evaluationRows = rows
-        .filter(
-          (row) =>
-            row.installationId &&
-            row.status !== VendorUsageImportRowStatus.REJECTED,
-        )
-        .map((row) => ({
-          installationId: row.installationId!,
-          actualKwh: Number(row.totalKwh),
-        }));
-      if (evaluationRows.length > 0) {
-        await this.predictionEvaluationService.evaluateForPeriod(
-          batch.periodYearMonth,
-          evaluationRows,
-        );
+      try {
+        const evaluationRows = rows
+          .filter(
+            (row) =>
+              row.installationId &&
+              row.status !== VendorUsageImportRowStatus.REJECTED,
+          )
+          .map((row) => ({
+            installationId: row.installationId!,
+            actualKwh: Number(row.totalKwh),
+          }));
+        if (evaluationRows.length > 0) {
+          await this.predictionEvaluationService.evaluateForPeriod(
+            batch.periodYearMonth,
+            evaluationRows,
+          );
+        }
+      } catch (err) {
+        this.logger.error(`Batch ${batchId}: failed to evaluate predictions: ${err instanceof Error ? err.message : String(err)}`);
       }
 
       this.logger.log(
@@ -444,7 +467,9 @@ export class VendorUsageImportService {
       );
       return batch;
     } catch (e) {
-      await queryRunner.rollbackTransaction();
+      if (queryRunner.isTransactionActive) {
+        await queryRunner.rollbackTransaction();
+      }
       const batch = await this.batchRepository.findOne({
         where: { id: batchId },
       });
